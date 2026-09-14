@@ -82,19 +82,6 @@ client.on('messageCreate', async (message) => {
             await thread.send({ embeds: [introEmbed] });
         }
 
-        // ⭐ Normales Embed für Jede Nachricht – schlank, ohne "Neue Anfrage"-Text,
-        // ohne Nutzer-/Zeit-Felder
-        const embed = new EmbedBuilder()
-            .setColor('#6d4aff')
-            .setAuthor({
-                name: message.author.tag,
-                iconURL: message.author.displayAvatarURL()
-            })
-            .setDescription(message.content || '*Kein Textinhalt*')
-            .setTimestamp();
-
-        await thread.send({ embeds: [embed] });
-
         if (message.attachments.size > 0) {
             const files = message.attachments.map(att => ({
                 attachment: att.url,

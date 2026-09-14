@@ -57,6 +57,7 @@ client.on('messageCreate', async (message) => {
             }
         }
 
+        // ⭐ Nur wenn KEIN Thread existiert = ERSTE Nachricht dieses Users
         if (!thread) {
             const parentChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
             thread = await parentChannel.threads.create({
@@ -66,15 +67,14 @@ client.on('messageCreate', async (message) => {
             });
             userThreads.set(userId, thread.id);
 
-            // ⭐ NEU: Intro-NUR hier, direkt nach der Thread-Erstellung
+            // ⭐ Intro-Embed NUR hier, weil dieser Block nur 1x pro User durchlaufen wird
             const introEmbed = new EmbedBuilder()
-                .setColor('#00cc66')                       // grün = neues Ticket
+                .setColor('#00cc66')
                 .setTitle('📨 Neue Support-Anfrage')
                 .setDescription(
                     `**Nutzer:** ${message.author}\n` +
-                    `**User-ID:** \`${userId}\`\n` +
-                    `**Account erstellt:** <t:${Math.floor(message.author.createdTimestamp / 1000)}:R>\n\n` +
-                    ` Antworte einfach hier im Thread – der User bekommt die Nachricht per DM.`
+                    `**User-ID:** \`${userId}\`\n\n` +
+                    `↩️ Antworte einfach hier im Thread – der User bekommt die Nachricht per DM.`
                 )
                 .setThumbnail(message.author.displayAvatarURL())
                 .setTimestamp();
@@ -82,20 +82,27 @@ client.on('messageCreate', async (message) => {
             await thread.send({ embeds: [introEmbed] });
         }
 
-        // ⭐ Die normale Nachricht OHNE "Neue Anfrage"-Titel – gilt für ALLE Nachrichten
+        // ⭐ Normales Embed für Jede Nachricht – schlank, ohne "Neue Anfrage"-Text,
+        // ohne Nutzer-/Zeit-Felder
         const embed = new EmbedBuilder()
             .setColor('#6d4aff')
             .setAuthor({
                 name: message.author.tag,
-                iconURL: message.author.displayAvatarURL(),
-                url: `https://discord.com/users/${userId}`
+                iconURL: message.author.displayAvatarURL()
             })
             .setDescription(message.content || '*Kein Textinhalt*')
             .setTimestamp();
 
         await thread.send({ embeds: [embed] });
 
-        // ⭐ NEU: Bestätigung in der DM (Reaktion auf die Nachricht des Users)
+        if (message.attachments.size > 0) {
+            const files = message.attachments.map(att => ({
+                attachment: att.url,
+                name: att.name || 'attachment'
+            }));
+            await thread.send({ files });
+        }
+
         await message.react('📨');
 
     } catch (error) {

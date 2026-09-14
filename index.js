@@ -12,30 +12,33 @@ const client = new Client({
 });
 
 const SUPPORT_CHANNEL_ID = '1549062504250871838';
-
-// Cache: userId -> threadId
 const userThreads = new Map();
 
-client.on('clientReady', async () => {  // ⭐ renamed (Deprecation-Warning weg)
+// ⭐ Helper: User-ID aus dem Thread-Namen parsen
+// Name-Format: "Support - username [123456789]"
+function getUserIdFromThread(thread) {
+    const match = thread.name.match(/\[(\d+)\]/);
+    return match ? match[1] : null;
+}
+
+client.on('clientReady', async () => {
     console.log(`✅ ${client.user.tag} ist online!`);
 
     const channel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
-
-    // Aktive UND archivierte Threads laden, damit der Cache nach Restart funktioniert
     const active = await channel.threads.fetchActive();
     const archived = await channel.threads.fetchArchived();
 
     [...active.threads.values(), ...archived.threads.values()].forEach(thread => {
-        // User-ID steht im Topic
-        const match = thread.topic?.match(/UserID: (\d+)/);
-        if (match) {
-            userThreads.set(match[1], thread.id);
+        const userId = getUserIdFromThread(thread);
+        if (userId) {
+            userThreads.set(userId, thread.id);
         }
     });
 
     console.log(`🔄 ${userThreads.size} Threads geladen`);
 });
 
+// DM vom User → Thread
 client.on('messageCreate', async (message) => {
     if (message.guild || message.author.bot) return;
 
@@ -43,27 +46,24 @@ client.on('messageCreate', async (message) => {
 
     try {
         let thread = null;
-        let threadId = userThreads.get(userId);
+        const threadId = userThreads.get(userId);
 
-        // Existierenden Thread holen (falls vorhanden und noch nicht gelöscht)
         if (threadId) {
             try {
                 thread = await client.channels.fetch(threadId);
-                // Archivierten Thread wieder öffnen
                 if (thread.archived) await thread.setArchived(false);
             } catch {
-                thread = null; // Thread existiert nicht mehr
+                thread = null;
             }
         }
 
-        // ⭐ FIX: Thread erstellen UND direkt in `thread` speichern
         if (!thread) {
             const parentChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
 
             thread = await parentChannel.threads.create({
-                name: `Support - ${message.author.username}`,
-                topic: `UserID: ${userId}`,       // ⭐ User-ID für Persistenz & Rückantworten
-                autoArchiveDuration: 1440,        // Archive nach 24h
+                // ⭐ User-ID im Namen statt Topic (Threads haben kein topic!)
+                name: `Support - ${message.author.username} [${userId}]`,
+                autoArchiveDuration: 1440,
                 reason: `Support-Ticket von ${message.author.tag}`
             });
 
@@ -83,7 +83,6 @@ client.on('messageCreate', async (message) => {
 
         await thread.send({ embeds: [embed] });
 
-        // Anhänge separat senden
         if (message.attachments.size > 0) {
             const files = message.attachments.map(att => ({
                 attachment: att.url,
@@ -94,41 +93,40 @@ client.on('messageCreate', async (message) => {
 
     } catch (error) {
         console.error('❌ Fehler:', error);
-        try {
-            // Fallback OHNE Mention (deswegen wurdet du gepingt!)
-            const fallbackChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
-            await fallbackChannel.send({
-                content: `⚠️ DM erhalten (Fehler beim Thread-Handling). User: \`${message.author.tag}\` / \`${userId}\``,
-                allowedMentions: { parse: [] }   // ⭐ keine Pings
-            });
-        } catch (e) {
-            console.error('Fallback fehlgeschlagen:', e);
-        }
     }
 });
 
-// Support-Antworten im Thread zurück an den User per DM
+// ⭐ Antwort im Thread → DM an den User
 client.on('messageCreate', async (message) => {
     if (!message.channel.isThread()) return;
     if (message.channel.parentId !== SUPPORT_CHANNEL_ID) return;
     if (message.author.bot) return;
 
-    const match = message.channel.topic?.match(/UserID: (\d+)/);
-    if (!match) return;
+    const userId = getUserIdFromThread(message.channel);
+    if (!userId) {
+        return console.warn('⚠️ Keine User-ID im Thread-Namen gefunden:', message.channel.name);
+    }
 
     try {
-        const user = await client.users.fetch(match[1]);
+        const user = await client.users.fetch(userId);
 
         const embed = new EmbedBuilder()
             .setColor('#6d4aff')
             .setTitle('📩 Antwort vom Support')
             .setDescription(message.content || '*Kein Textinhalt*')
-            .setFooter({ text: `Antworte direkt hier per DM` })
+            .setFooter({ text: 'Antworte einfach direkt hier per DM' })
             .setTimestamp();
 
+        // Anhänge mit in die DM packen
+        if (message.attachments.size > 0) {
+            embed.setImage(message.attachments.first().url);
+        }
+
         await user.send({ embeds: [embed] });
+        await message.react('📨');  // Bestätigung, dass die Antwort raus ist
+
     } catch (e) {
-        console.error('DM an User fehlgeschlagen:', e.message);
+        console.error('DM fehlgeschlagen:', e.message);
         message.reply('⚠️ Konnte dem User keine DM schicken (evtl. DMs blockiert).');
     }
 });

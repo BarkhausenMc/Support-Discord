@@ -11,7 +11,7 @@ const client = new Client({
     partials: [Partials.Channel, Partials.Message]
 });
 
-const SUPPORT_CHANNEL_ID = 'DEINE_KANAL_ID_HIER';
+const SUPPORT_CHANNEL_ID = '1549062504250871838';
 
 // Cache für aktive Threads pro User (in-Memory, bei Neustart verloren)
 const userThreads = new Map();
@@ -59,12 +59,18 @@ client.on('messageCreate', async (message) => {
             if (!targetChannel || !threadId) {
                 const parentChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
                 
-                threadId = await parentChannel.threads.create({
+                await parentChannel.threads.create({
                     name: `Support - ${message.author.username}`,
-                    autoArchiveDuration: 60, // 60 Minuten
-                    reason: `Support-Thread für ${message.author.tag}`
+                    topic: `UserID: ${userId}`,  // ⭐ Wichtig!
+                    autoArchiveDuration: 60
                 });
-                
+
+                // Beim Abrufen eines Threads:
+                const threadUserId = message.channel.topic?.match(/UserID: (\d+)/)?.[1];
+                if (threadUserId) {
+                    // Diese Nachricht gehört zu User threadUserId
+                    // Antwort per DM senden: await client.users.fetch(threadUserId)
+                }                
                 // Im Cache speichern
                 userThreads.set(userId, threadId.id);
                 console.log(`✨ Neuer Thread erstellt: ${threadId.url}`);

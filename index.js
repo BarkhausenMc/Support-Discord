@@ -65,8 +65,24 @@ client.on('messageCreate', async (message) => {
                 reason: `Support-Ticket von ${message.author.tag}`
             });
             userThreads.set(userId, thread.id);
+
+            // ⭐ NEU: Intro-NUR hier, direkt nach der Thread-Erstellung
+            const introEmbed = new EmbedBuilder()
+                .setColor('#00cc66')                       // grün = neues Ticket
+                .setTitle('📨 Neue Support-Anfrage')
+                .setDescription(
+                    `**Nutzer:** ${message.author}\n` +
+                    `**User-ID:** \`${userId}\`\n` +
+                    `**Account erstellt:** <t:${Math.floor(message.author.createdTimestamp / 1000)}:R>\n\n` +
+                    ` Antworte einfach hier im Thread – der User bekommt die Nachricht per DM.`
+                )
+                .setThumbnail(message.author.displayAvatarURL())
+                .setTimestamp();
+
+            await thread.send({ embeds: [introEmbed] });
         }
 
+        // ⭐ Die normale Nachricht OHNE "Neue Anfrage"-Titel – gilt für ALLE Nachrichten
         const embed = new EmbedBuilder()
             .setColor('#6d4aff')
             .setAuthor({
@@ -79,20 +95,11 @@ client.on('messageCreate', async (message) => {
 
         await thread.send({ embeds: [embed] });
 
-        if (message.attachments.size > 0) {
-            const files = message.attachments.map(att => ({
-                attachment: att.url,
-                name: att.name || 'attachment'
-            }));
-            await thread.send({ files });
-        }
-
         // ⭐ NEU: Bestätigung in der DM (Reaktion auf die Nachricht des Users)
         await message.react('📨');
 
     } catch (error) {
         console.error('❌ Fehler:', error);
-        // ⭐ NEU: Bei Fehler anderes Emoji, damit der User merkt, dass was schiefging
         await message.react('⚠️').catch(() => {});
     }
 });

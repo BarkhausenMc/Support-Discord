@@ -59,16 +59,12 @@ client.on('messageCreate', async (message) => {
 
         if (!thread) {
             const parentChannel = await client.channels.fetch(SUPPORT_CHANNEL_ID);
-
             thread = await parentChannel.threads.create({
-                // ⭐ User-ID im Namen statt Topic (Threads haben kein topic!)
                 name: `Support - ${message.author.username} [${userId}]`,
                 autoArchiveDuration: 1440,
                 reason: `Support-Ticket von ${message.author.tag}`
             });
-
             userThreads.set(userId, thread.id);
-            console.log(`✨ Neuer Thread: ${thread.name} (${thread.id})`);
         }
 
         const embed = new EmbedBuilder()
@@ -91,8 +87,13 @@ client.on('messageCreate', async (message) => {
             await thread.send({ files });
         }
 
+        // ⭐ NEU: Bestätigung in der DM (Reaktion auf die Nachricht des Users)
+        await message.react('📨');
+
     } catch (error) {
         console.error('❌ Fehler:', error);
+        // ⭐ NEU: Bei Fehler anderes Emoji, damit der User merkt, dass was schiefging
+        await message.react('⚠️').catch(() => {});
     }
 });
 

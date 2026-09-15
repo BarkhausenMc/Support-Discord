@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -7,6 +7,10 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,    // Nachrichten auf Servern
         GatewayIntentBits.DirectMessages,   // PRIVATE DMs (wichtig!)
         GatewayIntentBits.MessageContent    // INHALT der Nachrichten (wichtig!)
+    ],
+    partials: [
+        Partials.Channel,   // ← DM-Channels, die nicht im Cache sind
+        Partials.Message    // ← Falls Nachrichten aus dem Cache geflogen sind
     ]
 });
 

@@ -3,8 +3,10 @@ require('dotenv').config();
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.DirectMessages
+        GatewayIntentBits.Guilds,           // Server Events
+        GatewayIntentBits.GuildMessages,    // Nachrichten auf Servern
+        GatewayIntentBits.DirectMessages,   // PRIVATE DMs (wichtig!)
+        GatewayIntentBits.MessageContent    // INHALT der Nachrichten (wichtig!)
     ]
 });
 

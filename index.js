@@ -72,9 +72,9 @@ client.on('messageCreate', async (message) => {
         }
 
         const user = await client.users.fetch(userId);
-        await user.send(`📬 **${message.author.username}:** ${message.content}`);
+        await user.send(`${message.content}`);
 
-        await message.react('✅');
+        await message.react('📨');
 
     } catch (error) {
         console.error('❌ DM konnte nicht gesendet werden:', error.message);

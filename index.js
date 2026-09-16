@@ -39,7 +39,7 @@ client.on('messageCreate', async (message) => {
             reason: `DM-Post für ${message.author.tag}`
         });
 
-        dmUser.set(post.id, message.author.id);
+        dmUsers.set(post.id, message.author.id);
 
         await message.react('📨');
 

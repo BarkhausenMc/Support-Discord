@@ -11,6 +11,8 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
+const dmUsers = new Map();
+
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
 });
@@ -32,10 +34,12 @@ client.on('messageCreate', async (message) => {
         const post = await targetChannel.threads.create({
             name: message.author.username,
             message: {
-                content: `📨 **${message.author.tag}** (ID: ${message.author.id}):\n${message.content || '*Kein Text*'}`
+                content: `📨 **${message.author.tag}**:\n${message.content || '*Kein Text*'}`
             },
             reason: `DM-Post für ${message.author.tag}`
         });
+
+        dmUser.set(post.id, message.author.id);
 
         await message.react('📨');
 
@@ -44,6 +48,37 @@ client.on('messageCreate', async (message) => {
     } catch (error) {
         console.error('❌ Fehler:', error);
         await message.react('❌');
+    }
+});
+
+client.on('messageCreate', async (message) => {
+
+    if (!message.channel.isThread()) return;
+    if (message.author.bot) return;
+    if (message.channel.parentId !== process.env.CHANNEL_ID) return;
+    if (message.id === message.channel.id) return;
+
+    try {
+
+        let userId = dmUsers.get(message.channel.id);
+
+        if (!userId) {
+            
+            const starter = await message.channel.fetchStarterMessage();
+            const match = starter.content.match(/\(ID: (\d+)\)/);
+            if (!match) return;
+            userId = match[1];
+            dmUsers.set(message.channel.id, userId);
+        }
+
+        const user = await client.users.fetch(userId);
+        await user.send(`📬 **${message.author.username}:** ${message.content}`);
+
+        await message.react('✅');
+
+    } catch (error) {
+        console.error('❌ DM konnte nicht gesendet werden:', error.message);
+        await message.react('⚠️');
     }
 });
 

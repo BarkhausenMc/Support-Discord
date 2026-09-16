@@ -18,25 +18,45 @@ client.on('clientReady', async () => {
     console.log('Bot ist Online ✅');
 
     try {
+        // ---- SCHRITT 1: Forum-Kanal holen ----
         const forum = await client.channels.fetch(process.env.CHANNEL_ID);
+        console.log('Forum gefunden:', forum ? forum.name : 'NICHT GEFUNDEN', '| Type:', forum?.type);
 
+        // ---- SCHRITT 2: Aktive Posts holen ----
         const active = await forum.threads.fetchActive();
-        const archived = await forum.threads.fetchArchived();
+        console.log('Aktive Posts:', active.threads.size);
 
+        // ---- SCHRITT 3: Archivierte Posts holen ----
+        const archived = await forum.threads.fetchArchived().catch(err => {
+            console.log('Archiv-Fehler:', err.message);
+            return { threads: new Map() }; // leer weitermachen
+        });
+        console.log('Archivierte Posts:', archived.threads.size);
+
+        // ---- SCHRITT 4: Beide Listen zusammenlegen ----
         const allPosts = [...active.threads.values(), ...archived.threads.values()];
+        console.log('TOTAL Posts gefunden:', allPosts.length);
 
+        // ---- SCHRITT 5: Jeden Post einzeln verarbeiten ----
         for (const post of allPosts) {
-            const starter = await post.fetchStarterMessage().catch(() => null);
+            const starter = await post.fetchStarterMessage().catch(err => {
+                console.log(`⚠️ Post "${post.name}" Starter-Fehler:`, err.message);
+                return null;
+            });
             if (!starter) continue;
+
+            console.log(`📄 Post "${post.name}" Starter:`, starter.content.slice(0, 100));
 
             const match = starter.content.match(/\(ID: (\d+)\)/);
             if (match) {
                 userIdToPostId.set(match[1], post.id);
                 postIdToUserId.set(post.id, match[1]);
+            } else {
+                console.log(`⚠️ Post "${post.name}" hat KEIN (ID: ...) im Starter!`);
             }
         }
 
-        console.log(`📂 ${userIdToPostId.size} alte Posts wiederhergestellt`);
+        console.log(`📂 ${userIdToPostId.size} Posts wiederhergestellt`);
 
     } catch (error) {
         console.error('❌ Fehler beim Wiederherstellen:', error.message);

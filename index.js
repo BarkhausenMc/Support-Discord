@@ -11,7 +11,7 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-const activThread = new Map();
+const activeThreads = new Map(); 
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');

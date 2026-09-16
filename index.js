@@ -50,7 +50,7 @@ client.on('messageCreate', async (message) => {
         await  message.react('📨');
 
         await thread.send(
-            `📨 **Neue DM** von **${message.author.tag}** (ID: ${message.author.id}):\n${message.content || '*Kein Text*'}`
+            `📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`
         );
 
         if (message.attachments.size > 0) {

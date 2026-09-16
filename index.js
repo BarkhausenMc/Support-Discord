@@ -13,6 +13,7 @@ const client = new Client({
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
+    console.log('Channel ID aus env:', process.env.CHANNEL_ID);
 });
 
 client.on('messageCreate', async (message) => {
@@ -21,7 +22,7 @@ client.on('messageCreate', async (message) => {
 
     try {
         const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-        console.log('Channel ID aus env:', process.env.CHANNEL_ID);
+        
         if (!targetChannel || !targetChannel.isTextBased()) {
             console.log('❌ Target Channel nicht gefunden');
             return;

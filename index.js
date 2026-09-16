@@ -13,6 +13,12 @@ const client = new Client({
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
+    console.log('=== DEBUG CHANNEL INFO ===');
+    console.log('ID:', targetChannel.id);
+    console.log('Name:', targetChannel.name);
+    console.log('Type:', targetChannel.type); // Sollte 15 sein für Forum
+    console.log('IsTextBased:', targetChannel.isTextBased());
+    console.log('========================');
 });
 
 client.on('messageCreate', async (message) => {
@@ -26,13 +32,6 @@ client.on('messageCreate', async (message) => {
             console.log('Gefundener Typ:', targetChannel.type); 
             return;
         }
-
-        console.log('=== DEBUG CHANNEL INFO ===');
-        console.log('ID:', targetChannel.id);
-        console.log('Name:', targetChannel.name);
-        console.log('Type:', targetChannel.type); // Sollte 15 sein für Forum
-        console.log('IsTextBased:', targetChannel.isTextBased());
-        console.log('========================');
 
         const post = await targetChannel.threads.create({
             name: message.author.username,

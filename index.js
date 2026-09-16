@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, MessageActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -13,12 +13,6 @@ const client = new Client({
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
-    console.log('=== DEBUG CHANNEL INFO ===');
-    console.log('ID:', targetChannel.id);
-    console.log('Name:', targetChannel.name);
-    console.log('Type:', targetChannel.type); // Sollte 15 sein für Forum
-    console.log('IsTextBased:', targetChannel.isTextBased());
-    console.log('========================');
 });
 
 client.on('messageCreate', async (message) => {
@@ -26,10 +20,19 @@ client.on('messageCreate', async (message) => {
     if (message.channel.type !== 1) return;
 
     try {
-        const isValidChannel = targetChannel.type === 0 || targetChannel.type === 15; 
+        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        console.log('=== DEBUG CHANNEL INFO ===');
+        console.log('ID:', targetChannel.id);
+        console.log('Name:', targetChannel.name);
+        console.log('Type:', targetChannel.type); 
+        console.log('IsTextBased:', targetChannel.isTextBased());
+        console.log('========================');
+
+        const isValidChannel = targetChannel.type === 0 || targetChannel.type === 15;
         if (!targetChannel || !isValidChannel) {
             console.log('❌ Ziel-Channel ungültig oder nicht gefunden');
-            console.log('Gefundener Typ:', targetChannel.type); 
+            console.log('Gefundener Typ:', targetChannel.type);
             return;
         }
 
@@ -41,7 +44,7 @@ client.on('messageCreate', async (message) => {
             reason: `DM-Post für ${message.author.tag}`
         });
 
-        await message.react('📨');
+        await message.react('📬');
 
         const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
         if (role) {

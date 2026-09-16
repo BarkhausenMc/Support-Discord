@@ -28,6 +28,8 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
+        await  message.react('📨');
+
         await targetChannel.send(
             `📨 **Neue DM** von **${message.author.tag}** (ID: ${message.author.id}):\n${message.content || '*Kein Text*'}`
         );

@@ -29,6 +29,16 @@ async function getOrCreateThread(message, channel) {
         reason: `DM-Thread für ${message.author.tag}`
     });
 
+    const role = await channel.guild.roles.fetch(process.env.ROLE_ID);
+    if (role) {
+        await Promise.all(
+            [...role.members.values()].map(member =>
+                thread.members.add(member.id).catch(() => {})
+            )
+        );
+        
+    }
+
     activeThreads.set(message.author.id, thread);
     return thread;
 }

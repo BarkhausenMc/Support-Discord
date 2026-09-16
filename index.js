@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, MessageActivityType } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -11,9 +11,27 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
+const activThread = new Map();
+
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
 });
+
+async function getOrCreatThread(message, channel) {
+    if (activThread.has(message.author.id)) {
+        const cached = activThread.get(message.author.id);
+        const thread = await channel.thread.fetch(cached.id);
+        if (thread && !thread.archived) return thread;
+    }
+
+    const thread = await channel.thread.create({
+        name: `📩 ${message.author.username}`,
+        reason: 'DM-Thread für ${message.author.tag}', 
+    });
+
+    activThread.set(message.author.tag);
+    return thread;
+}
 
 client.on('messageCreate', async (message) => {
 
@@ -30,7 +48,7 @@ client.on('messageCreate', async (message) => {
 
         await  message.react('📨');
 
-        await targetChannel.send(
+        await thread.send(
             `📨 **Neue DM** von **${message.author.tag}** (ID: ${message.author.id}):\n${message.content || '*Kein Text*'}`
         );
 

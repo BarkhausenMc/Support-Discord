@@ -13,7 +13,6 @@ const client = new Client({
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
-    console.log('Channel ID aus env:', process.env.CHANNEL_ID);
 });
 
 client.on('messageCreate', async (message) => {
@@ -21,12 +20,19 @@ client.on('messageCreate', async (message) => {
     if (message.channel.type !== 1) return;
 
     try {
-        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-        
-        if (!targetChannel || !targetChannel.isTextBased()) {
-            console.log('❌ Target Channel nicht gefunden');
+        const isValidChannel = targetChannel.type === 0 || targetChannel.type === 15; 
+        if (!targetChannel || !isValidChannel) {
+            console.log('❌ Ziel-Channel ungültig oder nicht gefunden');
+            console.log('Gefundener Typ:', targetChannel.type); 
             return;
         }
+
+        console.log('=== DEBUG CHANNEL INFO ===');
+        console.log('ID:', targetChannel.id);
+        console.log('Name:', targetChannel.name);
+        console.log('Type:', targetChannel.type); // Sollte 15 sein für Forum
+        console.log('IsTextBased:', targetChannel.isTextBased());
+        console.log('========================');
 
         const post = await targetChannel.threads.create({
             name: message.author.username,

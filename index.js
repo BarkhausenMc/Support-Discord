@@ -87,7 +87,7 @@ client.on('messageCreate', async (message) => {
             post = await targetChannel.threads.create({
                 name: message.author.username,
                 message: {
-                    content: `📨 **${message.author.tag}**:\n${message.content || '*Kein Text*'}`
+                    content: `📨 **${message.author.tag}** (ID: ${message.author.id}):\n${message.content || '*Kein Text*'}`
                 },
                 reason: `DM-Post für ${message.author.tag}`
             });

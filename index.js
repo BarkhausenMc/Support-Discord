@@ -11,14 +11,13 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-const activeThreads = new Map(); 
+const activeThreads = new Map();
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
 });
 
 async function getOrCreateThread(message, channel) {
-
     if (activeThreads.has(message.author.id)) {
         const cached = activeThreads.get(message.author.id);
         const thread = await channel.threads.fetch(cached.id);
@@ -48,6 +47,8 @@ client.on('messageCreate', async (message) => {
         }
 
         await  message.react('📨');
+
+        const thread = await getOrCreateThread(message, targetChannel);
 
         await thread.send(
             `📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`

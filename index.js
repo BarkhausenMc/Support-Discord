@@ -22,13 +22,6 @@ client.on('messageCreate', async (message) => {
     try {
         const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
 
-        console.log('=== DEBUG CHANNEL INFO ===');
-        console.log('ID:', targetChannel.id);
-        console.log('Name:', targetChannel.name);
-        console.log('Type:', targetChannel.type); 
-        console.log('IsTextBased:', targetChannel.isTextBased());
-        console.log('========================');
-
         const isValidChannel = targetChannel.type === 0 || targetChannel.type === 15;
         if (!targetChannel || !isValidChannel) {
             console.log('❌ Ziel-Channel ungültig oder nicht gefunden');
@@ -44,16 +37,7 @@ client.on('messageCreate', async (message) => {
             reason: `DM-Post für ${message.author.tag}`
         });
 
-        await message.react('📬');
-
-        const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
-        if (role) {
-            await Promise.all(
-                [...role.members.values()].map(member =>
-                    post.members.add(member.id).catch(() => {})
-                )
-            );
-        }
+        await message.react('📨');
 
         console.log(`📤 Neuer Post von ${message.author.tag}`);
 

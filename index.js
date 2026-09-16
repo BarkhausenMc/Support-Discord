@@ -14,8 +14,33 @@ const client = new Client({
 const userIdToPostId = new Map(); 
 const postIdToUserId = new Map(); 
 
-client.on('clientReady', () => {
+client.on('clientReady', async () => {
     console.log('Bot ist Online ✅');
+
+    try {
+        const forum = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        const active = await forum.threads.fetchActive();
+        const archived = await forum.threads.fetchArchived();
+
+        const allPosts = [...active.threads.values(), ...archived.threads.values()];
+
+        for (const post of allPosts) {
+            const starter = await post.fetchStarterMessage().catch(() => null);
+            if (!starter) continue;
+
+            const match = starter.content.match(/\(ID: (\d+)\)/);
+            if (match) {
+                userIdToPostId.set(match[1], post.id);
+                postIdToUserId.set(post.id, match[1]);
+            }
+        }
+
+        console.log(`📂 ${userIdToPostId.size} alte Posts wiederhergestellt`);
+
+    } catch (error) {
+        console.error('❌ Fehler beim Wiederherstellen:', error.message);
+    }
 });
 
 client.on('messageCreate', async (message) => {
@@ -52,6 +77,11 @@ client.on('messageCreate', async (message) => {
 
         }
 
+        if (post.archived) {
+            await post.setArchived(false);
+            console.log('♻️ Archivierter Post wieder geöffnet');
+        }
+
         await post.send(`**${message.author.tag}**: ${message.content || '*Kein Text*'}`);
 
         await message.react('📨');
@@ -78,7 +108,6 @@ client.on('messageCreate', async (message) => {
             const match = starter.content.match(/\(ID: (\d+)\)/);
             if (!match) return;
             userId = match[1];
-            userIdToPostId.set(message.channel.ownerId, userId); 
             postIdToUserId.set(message.channel.id, userId);
         }
 

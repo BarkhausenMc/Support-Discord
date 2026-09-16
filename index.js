@@ -11,36 +11,41 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-const activeThreads = new Map();
+const activePosts = new Map();
 
 client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
 });
 
-async function getOrCreateThread(message, channel) {
+async function getOrCreatePost(message, forumChannel) {
+    // Existiert schon ein Post für diesen User?
     if (activeThreads.has(message.author.id)) {
         const cached = activeThreads.get(message.author.id);
-        const thread = await channel.threads.fetch(cached.id);
-        if (thread && !thread.archived) return thread;
+        const post = await forumChannel.threads.fetch(cached.id);
+        if (post && !post.archived) return post;
     }
 
-    const thread = await channel.threads.create({
-        name: `📩 ${message.author.username}`,
-        reason: `DM-Thread für ${message.author.tag}`
+    // Neuen Post erstellen – die DM IST direkt die Start-Nachricht
+    const post = await forumChannel.threads.create({
+        name: message.author.username,
+        message: {
+            content: `📨 **${message.author.tag}** (ID: ${message.author.id}) hat geschrieben:\n${message.content || '*Kein Text*'}`
+        },
+        reason: `DM-Post für ${message.author.tag}`
     });
 
-    const role = await channel.guild.roles.fetch(process.env.ROLE_ID);
+    // Rollen-Mitglieder direkt zum Post hinzufügen
+    const role = await forumChannel.guild.roles.fetch(process.env.ROLE_ID);
     if (role) {
         await Promise.all(
             [...role.members.values()].map(member =>
-                thread.members.add(member.id).catch(() => {})
+                post.members.add(member.id).catch(() => {})
             )
         );
-        
     }
 
-    activeThreads.set(message.author.id, thread);
-    return thread;
+    activeThreads.set(message.author.id, post);
+    return post;
 }
 
 client.on('messageCreate', async (message) => {
@@ -58,11 +63,11 @@ client.on('messageCreate', async (message) => {
 
         await  message.react('📨');
 
-        const thread = await getOrCreateThread(message, targetChannel);
+        const { post, isNew } = await getOrCreatePost(message, targetChannel);
 
-        await thread.send(
-            `📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`
-        );
+        if (!isNew) {
+            await post.send(`📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`);
+        }
 
         if (message.attachments.size > 0) {
             const links = message.attachments.map(a => a.url).join('\n');

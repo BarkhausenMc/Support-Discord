@@ -52,7 +52,7 @@ client.on('messageCreate', async (message) => {
 
         }
 
-        await post.send(`${message.author.tag}: ${message.content || '*Kein Text*'}`);
+        await post.send(`**${message.author.tag}**: ${message.content || '*Kein Text*'}`);
 
         await message.react('📨');
 

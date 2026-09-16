@@ -97,7 +97,7 @@ client.on('messageCreate', async (message) => {
             console.log('♻️ Archivierter Post wieder geöffnet');
         }
 
-        await post.send(`**${message.author.tag}**: ${message.content || '*Kein Text*'}`);
+        await post.send(`**${message.author.tag}**---> ${message.content || '*Kein Text*'}`);
 
         await message.react('📨');
 

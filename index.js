@@ -17,19 +17,20 @@ client.on('clientReady', () => {
     console.log('Bot ist Online ✅');
 });
 
-async function getOrCreatThread(message, channel) {
-    if (activThread.has(message.author.id)) {
-        const cached = activThread.get(message.author.id);
-        const thread = await channel.thread.fetch(cached.id);
+async function getOrCreateThread(message, channel) {
+
+    if (activeThreads.has(message.author.id)) {
+        const cached = activeThreads.get(message.author.id);
+        const thread = await channel.threads.fetch(cached.id);
         if (thread && !thread.archived) return thread;
     }
 
-    const thread = await channel.thread.create({
+    const thread = await channel.threads.create({
         name: `📩 ${message.author.username}`,
-        reason: 'DM-Thread für ${message.author.tag}', 
+        reason: `DM-Thread für ${message.author.tag}`
     });
 
-    activThread.set(message.author.tag);
+    activeThreads.set(message.author.id, thread);
     return thread;
 }
 

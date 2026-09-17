@@ -133,7 +133,7 @@ client.on('messageCreate', async (message) => {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        await message.send({
+        await message.reply({
             content: '👋 Hi! Wähle bitte eine Kategorie für dein Ticket:',
             components: [row]
         });
@@ -170,6 +170,57 @@ client.on('messageCreate', async (message) => {
     } catch (error) {
         console.error('❌ DM konnte nicht gesendet werden:', error.message);
         await message.react('⚠️');
+    }
+});
+
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    try {
+        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+        const userId = interaction.user.id;
+        const category = interaction.customId;
+
+        // PRÜFE OB USER BEREITS EIN TICKET HAT
+        const existingPostId = userIdToPostId.get(userId);
+
+        if (existingPostId) {
+            await interaction.reply({
+                content: '🚫 Du hast bereits ein offenes Ticket!',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // KATEGORIENAMEN BESTIMMEN
+        const categoryName = category.replace('ticket_', '').toUpperCase();
+
+        // NEUES TICKET ERSTELLEN
+        const post = await targetChannel.threads.create({
+            name: `🎫 ${categoryName} — ${interaction.user.username}`,
+            message: {
+                content: `🎫 **Neues Ticket von ${interaction.user.tag}**\nKategorie: **${categoryName}**\n\nBitte warte auf Unterstützung...`
+            },
+            reason: `Ticket für ${interaction.user.tag}`
+        });
+
+        // MAPS SPEICHERN
+        userIdToPostId.set(userId, post.id);
+        postIdToUserId.set(post.id, userId);
+
+        // DM AN USER MIT TICKET-LINK
+        await interaction.reply({
+            content: `✅ Ticket erstellt!\n📎 [Zum Ticket gehen](${post.url})`,
+            ephemeral: true
+        });
+
+        console.log(`🎫 Ticket erstellt für ${interaction.user.tag} (${categoryName})`);
+
+    } catch (error) {
+        console.error('❌ Ticket-Fehler:', error.message);
+        if (!interaction.replied) {
+            await interaction.reply({ content: '❌ Fehler beim Erstellen.', ephemeral: true });
+        }
     }
 });
 

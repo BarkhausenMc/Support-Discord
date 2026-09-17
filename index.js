@@ -111,22 +111,50 @@ client.on('clientReady', async () => {
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
-    if (message.channel.type !== 1) return; 
+    if (message.channel.type !== 1) return; // Nur DMs
 
     try {
+        // CHECK: HAT DER USER SCHON EIN OFFENES TICKET?
+        const existingPostId = userIdToPostId.get(message.author.id);
 
+        if (existingPostId) {
+            // >>> FALL A: TICKET EXISTIERT SCHON >>>
+            let post;
+            try {
+                post = await client.channels.fetch(existingPostId);
+            } catch (err) {
+                // Post existiert nicht mehr (gelöscht) → aufräumen
+                userIdToPostId.delete(message.author.id);
+                postIdToUserId.delete(existingPostId);
+            }
+
+            if (post) {
+                // Archiviert? Dann wieder öffnen
+                if (post.archived) {
+                    await post.setArchived(false);
+                }
+
+                // Nachricht in den Post weiterleiten
+                await post.send(`📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`);
+                await message.react('📬');
+                console.log(`📤 Ticket-Nachricht von ${message.author.tag}`);
+                return; // WICHTIG: Hier stoppen, Button-Menü nicht mehr senden!
+            }
+        }
+
+        // >>> FALL B: KEIN TICKET → BUTTON-MENÜ <<<
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('ticket_support')
                     .setLabel('🛠️ Technical Support')
                     .setStyle(ButtonStyle.Primary),
-                
+
                 new ButtonBuilder()
                     .setCustomId('ticket_sales')
                     .setLabel('💰 Sales Question')
                     .setStyle(ButtonStyle.Secondary),
-                
+
                 new ButtonBuilder()
                     .setCustomId('ticket_other')
                     .setLabel('❓ Other Inquiry')
@@ -141,7 +169,7 @@ client.on('messageCreate', async (message) => {
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 
     } catch (error) {
-        console.error('❌ Fehler beim Senden der Buttons:', error.message);
+        console.error('❌ Fehler:', error.message);
     }
 });
 

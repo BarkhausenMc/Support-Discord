@@ -136,10 +136,10 @@ client.on('messageCreate', async (message) => {
             )
     );
 
-            await message.channel.send({
-                embeds: [embed],
-                components:[row]
-            });
+        await message.channel.send({
+            components: [categoryContainer],
+            flags: MessageFlags.IsComponentsV2
+        });
 
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 

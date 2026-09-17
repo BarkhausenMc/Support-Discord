@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -142,6 +142,16 @@ client.on('messageCreate', async (message) => {
             }
         }
 
+                const embed = new EmbedBuilder()
+            .setTitle('Discord Support')
+            .setDescription('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
+            .addFields(
+                        { name: '🛠️ Technical Support', value: 'Für technische Probleme'},
+                        { name: '💰 Sales Question', value: 'Für Preis- und Kaufanfragen'},
+                        { name: '❓ Other Inquiry', value: 'Sonstiges'}
+            )
+            .setTimestamp();
+
         // >>> FALL B: KEIN TICKET → BUTTON-MENÜ <<<
         const row = new ActionRowBuilder()
             .addComponents(
@@ -161,10 +171,10 @@ client.on('messageCreate', async (message) => {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        await message.reply({
-            content: '👋 Hi! Wähle bitte eine Kategorie für dein Ticket:',
-            components: [row]
-        });
+            await message.channel.send({
+                embeds: [embed],
+                components:[row]
+            });
 
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 

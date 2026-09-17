@@ -156,12 +156,12 @@ client.on('messageCreate', async (message) => {
             const categoryContainer = new ContainerBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                        test
+                        `test`
                     )
 
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                        test2
+                        `test2`
                     )
                 )    
             );

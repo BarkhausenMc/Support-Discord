@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, ContainerBuilder, TextDisplayBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -142,15 +142,29 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-                const embed = new EmbedBuilder()
-            .setTitle('Discord Support')
-            .setDescription('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
-            .addFields(
-                        { name: '🛠️ Technical Support', value: 'Für technische Probleme'},
-                        { name: '💰 Sales Question', value: 'Für Preis- und Kaufanfragen'},
-                        { name: '❓ Other Inquiry', value: 'Sonstiges'}
-            )
-            .setTimestamp();
+            // const embed = new EmbedBuilder()
+            // .setTitle('Discord Support')
+            // .setDescription('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
+            // .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
+            // .addFields(
+            //             { name: '🛠️ Technical Support', value: 'Für technische Probleme'},
+            //             { name: '💰 Sales Question', value: 'Für Preis- und Kaufanfragen'},
+            //             { name: '❓ Other Inquiry', value: 'Sonstiges'}
+            // )
+            // .setTimestamp();
+
+            const categoryContainer = new ContainerBuilder()
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        test
+                    )
+
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        test2
+                    )
+                )    
+            );
 
         // >>> FALL B: KEIN TICKET → BUTTON-MENÜ <<<
         const row = new ActionRowBuilder()

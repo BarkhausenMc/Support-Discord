@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, ContainerBuilder, TextDisplayBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, ContainerBuilder, TextDisplayBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -58,57 +58,6 @@ client.on('clientReady', async () => {
     }
 });
 
-// client.on('messageCreate', async (message) => {
-//     if (message.author.bot) return;
-//     if (message.channel.type !== 1) return;
-
-//     try {
-//         const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-
-//         const isValidChannel = targetChannel.type === 0 || targetChannel.type === 15;
-//         if (!targetChannel || !isValidChannel) {
-//             console.log('❌ Ziel-Channel ungültig');
-//             return;
-//         }
-
-//         let post;
-//         const existingPostId = userIdToPostId.get(message.author.id);
-
-//         if (existingPostId) {
-//             console.log('🔄 Wiederverwende existierenden Post');
-//             post = await targetChannel.threads.fetch(existingPostId);
-//         } else {
-
-//             post = await targetChannel.threads.create({
-//                 name: message.author.username,
-//                 message: {
-//                     content: `📨 **${message.author.tag}** (ID: ${message.author.id}):\n${message.content || '*Kein Text*'}`
-//                 },
-//                 reason: `DM-Post für ${message.author.tag}`
-//             });
-
-//             userIdToPostId.set(message.author.id, post.id);
-//             postIdToUserId.set(post.id, message.author.id);
-
-//         }
-
-//         if (post.archived) {
-//             await post.setArchived(false);
-//             console.log('♻️ Archivierter Post wieder geöffnet');
-//         }
-
-//         await post.send(`**${message.author.tag}**: ${message.content || '*Kein Text*'}`);
-
-//         await message.react('📨');
-
-//         console.log(`📤 Nachricht im Post von ${message.author.tag}`);
-
-//     } catch (error) {
-//         console.error('❌ Fehler:', error);
-//         await message.react('❌');
-//     }
-// });
-
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     if (message.channel.type !== 1) return; // Nur DMs
@@ -142,48 +91,50 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-            // const embed = new EmbedBuilder()
-            // .setTitle('Discord Support')
-            // .setDescription('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
-            // .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
-            // .addFields(
-            //             { name: '🛠️ Technical Support', value: 'Für technische Probleme'},
-            //             { name: '💰 Sales Question', value: 'Für Preis- und Kaufanfragen'},
-            //             { name: '❓ Other Inquiry', value: 'Sonstiges'}
-            // )
-            // .setTimestamp();
-
             const categoryContainer = new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `test`
-                    )
-
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `test2`
-                    )
-                )    
-            );
-
-        // >>> FALL B: KEIN TICKET → BUTTON-MENÜ <<<
-        const row = new ActionRowBuilder()
+    .addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent('# Discord Support')
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+            .setDivider(true)
+            .setSpacing(SeparatorSpacingSize.Small)
+    )
+    .addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
+    )
+    .addTextDisplayComponents(
+        new TextDisplayBuilder()
+            .setContent(
+                '- ## 🛠️ Technical Support\nFür technische Probleme\n' +
+                '- ## 💰 Sales Question\nFür Preis- und Kaufanfragen\n' +
+                '- ## ❓ Other Inquiry\nSonstiges'
+            )
+    )
+    .addSeparatorComponents(
+        new SeparatorBuilder()
+            .setDivider(true)
+            .setSpacing(SeparatorSpacingSize.Small)
+    )
+    .addActionRowComponents(
+        new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('ticket_support')
                     .setLabel('🛠️ Technical Support')
                     .setStyle(ButtonStyle.Primary),
-
                 new ButtonBuilder()
                     .setCustomId('ticket_sales')
                     .setLabel('💰 Sales Question')
                     .setStyle(ButtonStyle.Secondary),
-
                 new ButtonBuilder()
                     .setCustomId('ticket_other')
                     .setLabel('❓ Other Inquiry')
                     .setStyle(ButtonStyle.Secondary)
-            );
+            )
+    );
 
             await message.channel.send({
                 embeds: [embed],

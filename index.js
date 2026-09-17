@@ -133,7 +133,7 @@ client.on('messageCreate', async (message) => {
                     .setStyle(ButtonStyle.Secondary)
             );
 
-        await message.reply({
+        await message.send({
             content: '👋 Hi! Wähle bitte eine Kategorie für dein Ticket:',
             components: [row]
         });

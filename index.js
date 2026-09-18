@@ -105,12 +105,6 @@ client.on('messageCreate', async (message) => {
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
                     .setContent('# `📨` Ticket Erstellen')
-            )
-
-            .addSeparatorComponents(
-                new SeparatorBuilder()
-                    .setDivider(true)
-                    .setSpacing(SeparatorSpacingSize.Large)
             );
 
             const buttonContainer = new ContainerBuilder()

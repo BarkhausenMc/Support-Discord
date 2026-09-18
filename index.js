@@ -104,7 +104,7 @@ client.on('messageCreate', async (message) => {
             const categoryContainer = new ContainerBuilder()
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
-                    .setContent('# `📩` Ticket Erstellen\n<*||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')
+                    .setContent('# `📩` Ticket Erstellen\n*||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')
             );
 
             const buttonContainer = new ContainerBuilder()

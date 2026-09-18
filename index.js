@@ -13,6 +13,7 @@ const client = new Client({
 
 const userIdToPostId = new Map(); 
 const postIdToUserId = new Map(); 
+// const banner = new AttachmentBuilder('');
 
 client.on('clientReady', async () => {
     console.log('Bot ist Online ✅');
@@ -91,16 +92,17 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-            // const pictureContainer =new ContainerBuilder()
-            // .addMediaGalleryComponents(
-            //     new MediaGalleryBuilder()
-            //         .addMediaGalleryItems(
-            //             new MediaGalleryItemBuilder()
-            //                 .setURL('')
-            //         )
-            // );
+        // const pictureContainer = new ContainerBuilder()
+        //     .addMediaGalleryComponents(
+        //         new MediaGalleryBuilder()
+        //             .addMediaGalleryItems(
+        //                 new MediaGalleryItemBuilder()
+        //                     .setURL('')  
+        //             )
+        //     );
 
             const categoryContainer = new ContainerBuilder()
+            .setAccentColor(0x6d4aff)
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
                     .setContent('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
@@ -112,36 +114,32 @@ client.on('messageCreate', async (message) => {
                         '- ## 💰 Sales Question\nFür Preis- und Kaufanfragen\n' +
                         '- ## ❓ Other Inquiry\nSonstiges'
                     )
-            )
-            .addSeparatorComponents(
-                new SeparatorBuilder()
-                    .setDivider(true)
-                    .setSpacing(SeparatorSpacingSize.Small)
-            )
-
-            const buttonContainer = new ContainerBuilder()
-            .addActionRowComponents(
-                new ActionRowBuilder()
-                    .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('ticket_support')
-                        .setLabel('🛠️ Technical Support')
-                        .setStyle(ButtonStyle.Primary),
-                    new ButtonBuilder()
-                        .setCustomId('ticket_sales')
-                        .setLabel('💰 Sales Question')
-                        .setStyle(ButtonStyle.Secondary),
-                    new ButtonBuilder()
-                        .setCustomId('ticket_other')
-                        .setLabel('❓ Other Inquiry')
-                        .setStyle(ButtonStyle.Secondary)
-                )
             );
 
-        await message.channel.send({
-            components: [/*pictureContainer*/, categoryContainer, buttonContainer],
-            flags: MessageFlags.IsComponentsV2
-        });
+            const buttonContainer = new ContainerBuilder()
+                .addActionRowComponents(
+                    new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('ticket_support')
+                                .setLabel('🛠️ Technical Support')
+                                .setStyle(ButtonStyle.Primary),
+                            new ButtonBuilder()
+                                .setCustomId('ticket_sales')
+                                .setLabel('💰 Sales Question')
+                                .setStyle(ButtonStyle.Secondary),
+                            new ButtonBuilder()
+                                .setCustomId('ticket_other')
+                                .setLabel('❓ Other Inquiry')
+                                .setStyle(ButtonStyle.Secondary)
+                        )
+                );
+
+            await message.channel.send({
+                components: [/*pictureContainer,*/ categoryContainer, buttonContainer],
+                // files: [banner],
+                flags: MessageFlags.IsComponentsV2
+            });
 
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 

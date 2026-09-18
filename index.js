@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags, MediaGalleryBuilder, MediaGalleryItemBuilder, AttachmentBuilder } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -91,53 +91,55 @@ client.on('messageCreate', async (message) => {
             }
         }
 
+            // const pictureContainer =new ContainerBuilder()
+            // .addMediaGalleryComponents(
+            //     new MediaGalleryBuilder()
+            //         .addMediaGalleryItems(
+            //             new MediaGalleryItemBuilder()
+            //                 .setURL('')
+            //         )
+            // );
+
             const categoryContainer = new ContainerBuilder()
-    .addTextDisplayComponents(
-        new TextDisplayBuilder()
-            .setContent('# Discord Support')
-    )
-    .addSeparatorComponents(
-        new SeparatorBuilder()
-            .setDivider(true)
-            .setSpacing(SeparatorSpacingSize.Small)
-    )
-    .addTextDisplayComponents(
-        new TextDisplayBuilder()
-            .setContent('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
-    )
-    .addTextDisplayComponents(
-        new TextDisplayBuilder()
-            .setContent(
-                '- ## 🛠️ Technical Support\nFür technische Probleme\n' +
-                '- ## 💰 Sales Question\nFür Preis- und Kaufanfragen\n' +
-                '- ## ❓ Other Inquiry\nSonstiges'
+            .addTextDisplayComponents(
+                new TextDisplayBuilder()
+                    .setContent('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
             )
-    )
-    .addSeparatorComponents(
-        new SeparatorBuilder()
-            .setDivider(true)
-            .setSpacing(SeparatorSpacingSize.Small)
-    )
-    .addActionRowComponents(
-        new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('ticket_support')
-                    .setLabel('🛠️ Technical Support')
-                    .setStyle(ButtonStyle.Primary),
-                new ButtonBuilder()
-                    .setCustomId('ticket_sales')
-                    .setLabel('💰 Sales Question')
-                    .setStyle(ButtonStyle.Secondary),
-                new ButtonBuilder()
-                    .setCustomId('ticket_other')
-                    .setLabel('❓ Other Inquiry')
-                    .setStyle(ButtonStyle.Secondary)
+            .addTextDisplayComponents(
+                new TextDisplayBuilder()
+                    .setContent(
+                        '- ## 🛠️ Technical Support\nFür technische Probleme\n' +
+                        '- ## 💰 Sales Question\nFür Preis- und Kaufanfragen\n' +
+                        '- ## ❓ Other Inquiry\nSonstiges'
+                    )
             )
-    );
+            .addSeparatorComponents(
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(SeparatorSpacingSize.Small)
+            )
+
+            const buttonContainer = new ContainerBuilder()
+            .addActionRowComponents(
+                new ActionRowBuilder()
+                    .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('ticket_support')
+                        .setLabel('🛠️ Technical Support')
+                        .setStyle(ButtonStyle.Primary),
+                    new ButtonBuilder()
+                        .setCustomId('ticket_sales')
+                        .setLabel('💰 Sales Question')
+                        .setStyle(ButtonStyle.Secondary),
+                    new ButtonBuilder()
+                        .setCustomId('ticket_other')
+                        .setLabel('❓ Other Inquiry')
+                        .setStyle(ButtonStyle.Secondary)
+                )
+            );
 
         await message.channel.send({
-            components: [categoryContainer],
+            components: [pictureContainer, categoryContainer, buttonContainer],
             flags: MessageFlags.IsComponentsV2
         });
 

@@ -102,19 +102,10 @@ client.on('messageCreate', async (message) => {
         //     );
 
             const categoryContainer = new ContainerBuilder()
-            .setAccentColor(0x6d4aff)
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
-                    .setContent('Bitte wähle eine Kategorie über die Buttons, um dein Ticket zu erstellen.')
+                    .setContent('`🎫`# Ticket Erstellen')
             )
-            .addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent(
-                        '- ## 🛠️ Technical Support\nFür technische Probleme\n' +
-                        '- ## 💰 Sales Question\nFür Preis- und Kaufanfragen\n' +
-                        '- ## ❓ Other Inquiry\nSonstiges'
-                    )
-            );
 
             const buttonContainer = new ContainerBuilder()
                 .addActionRowComponents(

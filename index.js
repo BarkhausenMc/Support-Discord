@@ -139,7 +139,7 @@ client.on('messageCreate', async (message) => {
             );
 
         await message.channel.send({
-            components: [pictureContainer, categoryContainer, buttonContainer],
+            components: [/*pictureContainer*/, categoryContainer, buttonContainer],
             flags: MessageFlags.IsComponentsV2
         });
 

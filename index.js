@@ -104,8 +104,14 @@ client.on('messageCreate', async (message) => {
             const categoryContainer = new ContainerBuilder()
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
-                    .setContent('# `🎫` Ticket Erstellen')
+                    .setContent('# `📨` Ticket Erstellen')
             )
+
+            .addSeparatorComponents(
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(SeparatorSpacingSize.Large)
+            );
 
             const buttonContainer = new ContainerBuilder()
                 .addActionRowComponents(

@@ -377,4 +377,5 @@ client.on('modalSubmit', async (modalInteraction) => {
     }
 });
 
+console.log('✅ modalSubmit Event registriert:', !!client.eventNames().includes('modalSubmit'));
 client.login(process.env.TOKEN);

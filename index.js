@@ -33,6 +33,88 @@ const userIdToPostId = new Map();
 const postIdToUserId = new Map(); 
 // const banner = new AttachmentBuilder('');
 
+const MODAL_CONFIG = {
+    ticket_support: {
+        modalTitle: '❓ Generell Support',
+        fields: [
+            {
+                id: 'problem',
+                label: 'Wie lautet dein Anliegen?',
+                style: 'SHORT',
+                placeholder: 'z.B. Bot antwortet nicht',
+                required: true,
+                maxLength: 100
+            },
+            {
+                id: 'problem_since_when',
+                label: 'Seit wann besteht das Problem?',
+                style: 'SHORT',
+                placeholder: 'z.B. seit heute Morgen',
+                required: false,
+                maxLength: 100
+            },
+            {
+                id: 'problem_description',
+                label: 'Beschreibe das Problem genau',
+                style: 'PARAGRAPH',
+                placeholder: 'Was hast du versucht? Welche Fehlermeldungen kamen?',
+                required: true,
+                maxLength: 1000
+            }
+        ]
+    },
+    ticket_sales: {
+        modalTitle: '🤝 Kooperation',
+        fields: [
+            {
+                id: 'cooperation_request',
+                label: 'Wie heißt dein Discord Server/Clan/Twitch usw. ?',
+                style: 'SHORT',
+                placeholder: 'z.B. https://discord.com/invite/yayk',
+                required: true,
+                maxLength: 100
+            },
+            {
+                id: 'cooperation_why',
+                label: 'Wieso möchtest du mit uns eine Kooperation eingehen? ',
+                style: 'PARAGRAPH',
+                // placeholder: '',
+                required: true,
+                maxLength: 1000
+            }
+        ]
+    },
+    ticket_other: {
+        modalTitle: '📝 Staff Bewerbung',
+        fields: [
+            {
+                id: 'staff_apply',
+                label: 'Für welche Position möchteste du dich Bewerben?',
+                style: 'SHORT',
+                placeholder: 'z.B. Moderator, Helper, Admin, Developer',
+                required: true,
+                maxLength: 100
+            },
+            {
+                id: 'staff_apply_why',
+                label: 'Wieso und warum möchtest du dich als Staff bewerben?',
+                style: 'PARAGRAPH',
+                // placeholder: '',
+                required: true,
+                maxLength: 1000
+            },
+            {
+                id: 'staff_apply_personal',
+                label: 'Wieso sollten wir genau dich als (deine ausgewählte Position) nehmen?',
+                style: 'PARAGRAPH',
+                // placeholder: '',
+                required: true,
+                maxLength: 1000
+            }
+        ]
+    }
+};
+
 client.on('clientReady', async () => {
     console.log('Bot ist Online ✅');
 
@@ -161,7 +243,7 @@ client.on('interactionCreate', async (interaction) => {
     if (!interaction.isButton()) return;
 
     try {
-        // Prüfe ob User schon ein Ticket hat
+        // === 1. TICKET-SCHON-OFFEN-CHECK ===
         const existingPostId = userIdToPostId.get(interaction.user.id);
 
         if (existingPostId) {
@@ -172,57 +254,66 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
-        // Kategoriename fürs Modal merken
+        // === 2. CONFIG FÜR DIESE KATEGORIE HOLEN ===
         const category = interaction.customId;
+        const config = MODAL_CONFIG[category];
+        if (!config) {
+            console.warn(`⚠️ Keine Config für Button: ${category}`);
+            return;
+        }
 
-        // ===== MODAL ERSTELLEN =====
+        // === 3. MODAL DYNAMISCH BAUEN ===
         const modal = new ModalBuilder()
-            .setCustomId(`ticket_modal_${category}`)      // ← Kategorie in der ID versteckt!
-            .setTitle('Neues Ticket')
-            .addComponents(
+            .setCustomId(`ticket_modal_${category}`)
+            .setTitle(config.modalTitle);
+
+        for (const field of config.fields) {
+            modal.addComponents(
                 new ActionRowBuilder().addComponents(
                     new TextInputBuilder()
-                        .setCustomId('ticket_subject')
-                        .setLabel('Betreff')
-                        .setStyle(TextInputStyle.Short)
-                        .setPlaceholder('Worum geht es kurz?')
-                        .setMinLength(5)
-                        .setMaxLength(100)
-                        .setRequired(true)
-                ),
-                new ActionRowBuilder().addComponents(
-                    new TextInputBuilder()
-                        .setCustomId('ticket_description')
-                        .setLabel('Beschreibung')
-                        .setStyle(TextInputStyle.Paragraph)
-                        .setPlaceholder('Beschreibe dein Problem ausführlich...')
-                        .setMinLength(10)
-                        .setMaxLength(1000)
-                        .setRequired(true)
+                        .setCustomId(field.id)
+                        .setLabel(field.label)
+                        .setStyle(field.style === 'SHORT' ? TextInputStyle.Short : TextInputStyle.Paragraph)
+                        .setPlaceholder(field.placeholder)
+                        .setRequired(field.required)
+                        .setMaxLength(field.maxLength)
                 )
             );
+        }
 
-        // Modal anzeigen
+        // === 4. MODAL ANZEIGEN ===
         await interaction.showModal(modal);
 
     } catch (error) {
-        console.error('❌ Fehler:', error.message);
+        console.error('❌ Button-Fehler:', error.message);
+        if (!interaction.replied) {
+            await interaction.reply({
+                content: '❌ Da ist etwas schiefgelaufen.',
+                flags: MessageFlags.Ephemeral
+            }).catch(() => {});
+        }
     }
 });
 
 client.on('modalSubmit', async (modalInteraction) => {
     try {
-        // Kategorie aus der Modal-ID extrahieren (ticket_modal_ticket_support → SUPPORT)
-        const category = modalInteraction.customId.replace('ticket_modal_ticket_', '').toUpperCase();
+        console.log('📝 Modal eingegangen:', modalInteraction.customId);
 
-        // Eingaben aus den Feldern holen
-        const subject = modalInteraction.fields.getTextInputValue('ticket_subject');
-        const description = modalInteraction.fields.getTextInputValue('ticket_description');
+        // === 1. KATEGORIE AUS DER MODAL-ID EXTRAHIEREN ===
+        const categoryKey = modalInteraction.customId.replace('ticket_modal_', '');
+        const config = MODAL_CONFIG[categoryKey];
+        if (!config) {
+            console.warn(`⚠️ Unbekannte Modal-ID: ${modalInteraction.customId}`);
+            return;
+        }
 
-        // Forum-Kanal holen
-        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+        // === 2. ALLE ANTWORTEN EINSAMMELN ===
+        const answers = {};
+        for (const field of config.fields) {
+            answers[field.id] = modalInteraction.fields.getTextInputValue(field.id);
+        }
 
-        // Doppel-Check: doch schon ein Ticket offen? (User könnte 2 Tabs offen haben)
+        // === 3. DOPPEL-CHECK: DOCH SCHON EIN TICKET OFFEN? ===
         const existingPostId = userIdToPostId.get(modalInteraction.user.id);
         if (existingPostId) {
             await modalInteraction.reply({
@@ -232,20 +323,30 @@ client.on('modalSubmit', async (modalInteraction) => {
             return;
         }
 
-        // Ticket-Post erstellen – mit Betreff im Titel und ID fürs Backup!
+        // === 4. FORUM-KANAL HOLEN ===
+        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        // === 5. START-NACHRICHT AUS DEN ANTWORTEN BAUEN ===
+        let ticketText = `🎫 **Neues Ticket von ${modalInteraction.user.tag}** (ID: ${modalInteraction.user.id})\nKategorie: **${config.modalTitle}**\n`;
+        for (const field of config.fields) {
+            ticketText += `\n**${field.label}**\n${answers[field.id]}`;
+        }
+
+        // Erste Frage = Betreff = Post-Titel
+        const subject = answers[config.fields[0].id];
+
+        // === 6. TICKET-POST ERSTELLEN ===
         const post = await targetChannel.threads.create({
             name: `🎫 ${subject}`,
-            message: {
-                content: `🎫 **Neues Ticket von ${modalInteraction.user.tag}** (ID: ${modalInteraction.user.id})\nKategorie: **${category}**\nBetreff: **${subject}**\n\n${description}`
-            },
+            message: { content: ticketText },
             reason: `Ticket von ${modalInteraction.user.tag}`
         });
 
-        // Maps füllen
+        // === 7. MAPS PFLEGEN (Persistenz!) ===
         userIdToPostId.set(modalInteraction.user.id, post.id);
         postIdToUserId.set(post.id, modalInteraction.user.id);
 
-        // Rollen-Mitglieder adden
+        // === 8. TEAM-ROLLE IN DEN POST ADDEN ===
         const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
         if (role) {
             await Promise.all(
@@ -255,21 +356,21 @@ client.on('modalSubmit', async (modalInteraction) => {
             );
         }
 
-        // User Bestätigung mit Link
+        // === 9. BESTÄTIGUNG AN DEN USER ===
         await modalInteraction.reply({
             content: `✅ Ticket erstellt!\n📎 [Zum Ticket](${post.url})`,
             flags: MessageFlags.Ephemeral
         });
 
-        console.log(`🎫 Ticket von ${modalInteraction.user.tag} (${category}): ${subject}`);
+        console.log(`🎫 Ticket erstellt: ${modalInteraction.user.tag} | ${subject}`);
 
     } catch (error) {
-        console.error('❌ Modal-Fehler:', error.message);
+        console.error('❌ Modal-Fehler:', error);
         if (!modalInteraction.replied) {
             await modalInteraction.reply({
                 content: '❌ Da ist etwas schiefgelaufen.',
                 flags: MessageFlags.Ephemeral
-            });
+            }).catch(() => {});
         }
     }
 });

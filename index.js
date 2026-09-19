@@ -31,7 +31,6 @@ const client = new Client({
 
 const userIdToPostId = new Map(); 
 const postIdToUserId = new Map(); 
-// const banner = new AttachmentBuilder('');
 
 const MODAL_CONFIG = {
     generel_support: {
@@ -192,14 +191,14 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-        // const pictureContainer = new ContainerBuilder()
-        //     .addMediaGalleryComponents(
-        //         new MediaGalleryBuilder()
-        //             .addMediaGalleryItems(
-        //                 new MediaGalleryItemBuilder()
-        //                     .setURL('')  
-        //             )
-        //     );
+        const pictureContainer = new ContainerBuilder()
+            .addMediaGalleryComponents(
+                new MediaGalleryBuilder()
+                    .addMediaGalleryItems(
+                        new MediaGalleryItemBuilder()
+                            .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png')  
+                    )
+            );
 
             const categoryContainer = new ContainerBuilder()
             .addTextDisplayComponents(
@@ -227,8 +226,7 @@ client.on('messageCreate', async (message) => {
                 );
 
             await message.channel.send({
-                components: [/*pictureContainer,*/ categoryContainer, buttonContainer],
-                // files: [banner],
+                components: [pictureContainer, categoryContainer, buttonContainer],
                 flags: MessageFlags.IsComponentsV2
             });
 

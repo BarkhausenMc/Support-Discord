@@ -197,7 +197,7 @@ client.on('messageCreate', async (message) => {
                         new MediaGalleryBuilder()
                             .addItems([
                                 new MediaGalleryItemBuilder()
-                                    .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot-klein.png')
+                                    .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot-ohneLogo.png')
                             ])
                     );
 

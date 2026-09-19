@@ -242,6 +242,89 @@ client.on('messageCreate', async (message) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
+     // ===== TEIL 1: MODAL WURDE ABGESCHICKT =====
+    if (interaction.isModalSubmit()) {
+        try {
+            console.log('📝 Modal-Submit gekommen! CustomID:', interaction.customId);
+
+            // Kategorie aus der Modal-ID holen
+            const categoryKey = interaction.customId.replace('ticket_modal_', '');
+            const config = MODAL_CONFIG[categoryKey];
+            if (!config) {
+                console.warn('⚠️ Keine Config für:', categoryKey);
+                return;
+            }
+
+            // Alle Antworten einsammeln
+            const answers = {};
+            for (const field of config.fields) {
+                answers[field.id] = interaction.fields.getTextInputValue(field.id);
+            }
+
+            // Doppel-Check: schon ein Ticket offen?
+            if (userIdToPostId.has(interaction.user.id)) {
+                await interaction.reply({
+                    content: '🚫 Du hast bereits ein offenes Ticket!',
+                    flags: MessageFlags.Ephemeral
+                });
+                return;
+            }
+
+            // Forum-Kanal holen
+            const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+            // Ticket-Text zusammenbauen
+            let ticketText = `🎫 **Neues Ticket von ${interaction.user.tag}** (ID: ${interaction.user.id})\n`;
+            ticketText += `Kategorie: **${config.modalTitle}**\n`;
+            for (const field of config.fields) {
+                ticketText += `\n**${field.label}**\n${answers[field.id]}`;
+            }
+
+            // Betreff = erstes Feld
+            const subject = answers[config.fields[0].id];
+
+            // Post erstellen
+            const post = await targetChannel.threads.create({
+                name: `🎫 ${subject}`,
+                message: { content: ticketText },
+                reason: `Ticket von ${interaction.user.tag}`
+            });
+
+            // Maps pflegen
+            userIdToPostId.set(interaction.user.id, post.id);
+            postIdToUserId.set(post.id, interaction.user.id);
+
+            // Team-Rolle adden
+            const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
+            if (role) {
+                await Promise.all(
+                    [...role.members.values()].map(member =>
+                        post.members.add(member.id).catch(() => {})
+                    )
+                );
+            }
+
+            // Bestätigung an User
+            await interaction.reply({
+                content: `✅ Ticket erstellt!\n📎 [Zum Ticket](${post.url})`,
+                flags: MessageFlags.Ephemeral
+            });
+
+            console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${subject}`);
+
+        } catch (error) {
+            console.error('❌ Modal-Submit Fehler:', error);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ Da ist etwas schiefgelaufen.',
+                    flags: MessageFlags.Ephemeral
+                }).catch(() => {});
+            }
+        }
+        return; // Wichtig: danach nicht mehr in die Button-Logik fallen
+    }
+
+    
     if (!interaction.isButton()) return;
 
     try {
@@ -291,33 +374,6 @@ client.on('interactionCreate', async (interaction) => {
         if (!interaction.replied) {
             await interaction.reply({
                 content: '❌ Da ist etwas schiefgelaufen.',
-                flags: MessageFlags.Ephemeral
-            }).catch(() => {});
-        }
-    }
-});
-
-client.on('modalSubmit', async (modalInteraction) => {
-    console.log('📝 1. Modal-Submit gestartet!');
-
-    try {
-        // Schritt 1: Modal-ID prüfen
-        console.log('📝 2. CustomID:', modalInteraction.customId);
-        
-        // Nur Antwort senden – kein Ticket-Erstellen!
-        await modalInteraction.reply({
-            content: '✅ Test: Modal funktioniert!',
-            flags: MessageFlags.Ephemeral
-        });
-        
-        console.log('📝 3. Antwort gesendet');
-
-    } catch (error) {
-        console.error('💥 CRASH:', error);
-        
-        if (!modalInteraction.replied && !modalInteraction.deferred) {
-            await modalInteraction.reply({
-                content: '❌ Crash getestet.',
                 flags: MessageFlags.Ephemeral
             }).catch(() => {});
         }

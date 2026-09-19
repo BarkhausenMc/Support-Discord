@@ -1,4 +1,22 @@
-const { Client, GatewayIntentBits, Partials, ActionRowBuilder, ButtonBuilder, ButtonStyle, Embed, EmbedBuilder, ContainerBuilder, TextDisplayBuilder, SeparatorBuilder, SeparatorSpacingSize, MessageFlags, MediaGalleryBuilder, MediaGalleryItemBuilder, AttachmentBuilder } = require('discord.js');
+const { Client,
+        GatewayIntentBits,
+        Partials,
+        ActionRowBuilder, 
+        ButtonBuilder, 
+        ButtonStyle, 
+        Embed, 
+        EmbedBuilder, 
+        ContainerBuilder, 
+        TextDisplayBuilder, 
+        SeparatorBuilder, 
+        SeparatorSpacingSize, 
+        MessageFlags, 
+        MediaGalleryBuilder, 
+        MediaGalleryItemBuilder, 
+        AttachmentBuilder,
+        ModalBuilder, 
+        TextInputBuilder, 
+        TextInputStyle  } = require('discord.js');
 require('dotenv').config();
 
 const client = new Client({
@@ -113,15 +131,15 @@ client.on('messageCreate', async (message) => {
                         .addComponents(
                             new ButtonBuilder()
                                 .setCustomId('generel_support')
-                                .setLabel('> ❓ Generell Support')
+                                .setLabel('❓ Generell Support')
                                 .setStyle(ButtonStyle.Secondary),
                             new ButtonBuilder()
                                 .setCustomId('cooperation')
-                                .setLabel('> 🤝 Kooperation')
+                                .setLabel('🤝 Kooperation')
                                 .setStyle(ButtonStyle.Secondary),
                             new ButtonBuilder()
                                 .setCustomId('staff_apply')
-                                .setLabel('> 📝 Staff Bewerbung')
+                                .setLabel('📝 Staff Bewerbung')
                                 .setStyle(ButtonStyle.Secondary)
                         )
                 );
@@ -139,81 +157,66 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-client.on('messageCreate', async (message) => {
-    if (!message.channel.isThread()) return;
-    if (message.author.bot) return;
-    if (message.channel.parentId !== process.env.CHANNEL_ID) return;
-    if (message.id === message.channel.id) return; // Starter-Nachricht überspringen
-
+client.on('modalSubmit', async (modalInteraction) => {
     try {
-        let userId = postIdToUserId.get(message.channel.id);
+        // Kategorie aus der Modal-ID extrahieren (ticket_modal_ticket_support → SUPPORT)
+        const category = modalInteraction.customId.replace('ticket_modal_ticket_', '').toUpperCase();
 
-        if (!userId) {
-            const starter = await message.channel.fetchStarterMessage();
-            const match = starter.content.match(/\(ID: (\d+)\)/);
-            if (!match) return;
-            userId = match[1];
-            postIdToUserId.set(message.channel.id, userId);
-        }
+        // Eingaben aus den Feldern holen
+        const subject = modalInteraction.fields.getTextInputValue('ticket_subject');
+        const description = modalInteraction.fields.getTextInputValue('ticket_description');
 
-        const user = await client.users.fetch(userId);
-        await user.send(`${message.content}`);
-
-        await message.react('📨');
-
-    } catch (error) {
-        console.error('❌ DM konnte nicht gesendet werden:', error.message);
-        await message.react('⚠️');
-    }
-});
-
-client.on('interactionCreate', async (interaction) => {
-    if (!interaction.isButton()) return;
-
-    try {
+        // Forum-Kanal holen
         const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-        const userId = interaction.user.id;
-        const category = interaction.customId;
 
-        // PRÜFE OB USER BEREITS EIN TICKET HAT
-        const existingPostId = userIdToPostId.get(userId);
-
+        // Doppel-Check: doch schon ein Ticket offen? (User könnte 2 Tabs offen haben)
+        const existingPostId = userIdToPostId.get(modalInteraction.user.id);
         if (existingPostId) {
-            await interaction.reply({
+            await modalInteraction.reply({
                 content: '🚫 Du hast bereits ein offenes Ticket!',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
             return;
         }
 
-        // KATEGORIENAMEN BESTIMMEN
-        const categoryName = category.replace('ticket_', '').toUpperCase();
-
-        // NEUES TICKET ERSTELLEN
+        // Ticket-Post erstellen – mit Betreff im Titel und ID fürs Backup!
         const post = await targetChannel.threads.create({
-            name: `🎫 ${categoryName} — ${interaction.user.username}`,
+            name: `🎫 ${subject}`,
             message: {
-                content: `🎫 **Neues Ticket von ${interaction.user.tag}**\nKategorie: **${categoryName}**\n\nBitte warte auf Unterstützung...`
+                content: `🎫 **Neues Ticket von ${modalInteraction.user.tag}** (ID: ${modalInteraction.user.id})\nKategorie: **${category}**\nBetreff: **${subject}**\n\n${description}`
             },
-            reason: `Ticket für ${interaction.user.tag}`
+            reason: `Ticket von ${modalInteraction.user.tag}`
         });
 
-        // MAPS SPEICHERN
-        userIdToPostId.set(userId, post.id);
-        postIdToUserId.set(post.id, userId);
+        // Maps füllen
+        userIdToPostId.set(modalInteraction.user.id, post.id);
+        postIdToUserId.set(post.id, modalInteraction.user.id);
 
-        // DM AN USER MIT TICKET-LINK
-        await interaction.reply({
-            content: `✅ Ticket erstellt!\n📎 [Zum Ticket gehen](${post.url})`,
-            ephemeral: true
+        // Rollen-Mitglieder adden
+        const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
+        if (role) {
+            await Promise.all(
+                [...role.members.values()].map(member =>
+                    post.members.add(member.id).catch(() => {})
+                )
+            );
+        }
+
+        // User Bestätigung mit Link
+        await modalInteraction.reply({
+            content: `✅ Ticket erstellt!\n📎 [Zum Ticket](${post.url})`,
+            flags: MessageFlags.Ephemeral
         });
 
-        console.log(`🎫 Ticket erstellt für ${interaction.user.tag} (${categoryName})`);
+        console.log(`🎫 Ticket von ${modalInteraction.user.tag} (${category}): ${subject}`);
 
     } catch (error) {
-        console.error('❌ Ticket-Fehler:', error.message);
-        if (!interaction.replied) {
-            await interaction.reply({ content: '❌ Fehler beim Erstellen.', ephemeral: true });
+        console.error('❌ Modal-Fehler:', error.message);
+        if (!modalInteraction.replied) {
+            await modalInteraction.reply({
+                content: '❌ Da ist etwas schiefgelaufen.',
+                flags: MessageFlags.Ephemeral
+            });
         }
     }
 });

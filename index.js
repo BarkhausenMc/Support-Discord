@@ -112,17 +112,17 @@ client.on('messageCreate', async (message) => {
                     new ActionRowBuilder()
                         .addComponents(
                             new ButtonBuilder()
-                                .setCustomId('ticket_support')
-                                .setLabel('🛠️ Technical Support')
-                                .setStyle(ButtonStyle.Primary),
+                                .setCustomId('generel_support')
+                                .setLabel('❓ Generell Support')
+                                .setStyle(ButtonStyle.Success),
                             new ButtonBuilder()
-                                .setCustomId('ticket_sales')
-                                .setLabel('💰 Sales Question')
-                                .setStyle(ButtonStyle.Secondary),
+                                .setCustomId('cooperation')
+                                .setLabel('🤝 Kooperation')
+                                .setStyle(ButtonStyle.Success),
                             new ButtonBuilder()
-                                .setCustomId('ticket_other')
-                                .setLabel('❓ Other Inquiry')
-                                .setStyle(ButtonStyle.Secondary)
+                                .setCustomId('staff_apply')
+                                .setLabel('📝 Staff Bewerbung')
+                                .setStyle(ButtonStyle.Success)
                         )
                 );
 

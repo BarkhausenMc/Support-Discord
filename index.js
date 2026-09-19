@@ -298,26 +298,40 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 client.on('modalSubmit', async (modalInteraction) => {
-    try {
-        console.log('📝 Modal eingegangen:', modalInteraction.customId);
+    console.log('📝 Modal-Submit gestartet! CustomID:', modalInteraction.customId);
 
-        // === 1. KATEGORIE AUS DER MODAL-ID EXTRAHIEREN ===
+    try {
+        // 1. KATEGORIE AUS DER MODAL-ID HOLEN
         const categoryKey = modalInteraction.customId.replace('ticket_modal_', '');
-        const config = MODAL_CONFIG[categoryKey];
-        if (!config) {
-            console.warn(`⚠️ Unbekannte Modal-ID: ${modalInteraction.customId}`);
+        console.log('🔍 Kategorietest:', categoryKey);
+
+        // Sicherheit prüfen
+        if (!MODAL_CONFIG[categoryKey]) {
+            console.error('❌ Keine Config für:', categoryKey);
+            await modalInteraction.reply({
+                content: '❌ Ungültiges Formular.',
+                flags: MessageFlags.Ephemeral
+            });
             return;
         }
 
-        // === 2. ALLE ANTWORTEN EINSAMMELN ===
+        // 2. ALLE FELD-ANTWORTEN SAMMELN
+        const config = MODAL_CONFIG[categoryKey];
         const answers = {};
+        
         for (const field of config.fields) {
-            answers[field.id] = modalInteraction.fields.getTextInputValue(field.id);
+            try {
+                answers[field.id] = await modalInteraction.fields.getTextInputValue(field.id);
+            } catch (err) {
+                console.error(`❌ Feld "${field.id}" fehlgeschlagen:`, err.message);
+                throw err; // Weiterwerfen um Abbruch zu signalisieren
+            }
         }
 
-        // === 3. DOPPEL-CHECK: DOCH SCHON EIN TICKET OFFEN? ===
-        const existingPostId = userIdToPostId.get(modalInteraction.user.id);
-        if (existingPostId) {
+        console.log('✅ Antworten gesammelt:', answers);
+
+        // 3. TICKET-SCHON-OFFEN-CHECK (zweite Sicherheit)
+        if (userIdToPostId.has(modalInteraction.user.id)) {
             await modalInteraction.reply({
                 content: '🚫 Du hast bereits ein offenes Ticket!',
                 flags: MessageFlags.Ephemeral
@@ -325,50 +339,66 @@ client.on('modalSubmit', async (modalInteraction) => {
             return;
         }
 
-        // === 4. FORUM-KANAL HOLEN ===
-        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+        // 4. FORUM-KANAL HOLEN
+        let targetChannel;
+        try {
+            targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+            console.log('✅ Kanal gefunden:', targetChannel.name);
+        } catch (err) {
+            console.error('❌ Kanal-Fehler:', err.message);
+            throw err;
+        }
 
-        // === 5. START-NACHRICHT AUS DEN ANTWORTEN BAUEN ===
-        let ticketText = `🎫 **Neues Ticket von ${modalInteraction.user.tag}** (ID: ${modalInteraction.user.id})\nKategorie: **${config.modalTitle}**\n`;
+        // 5. START-NACHRICHT ZUSAMMENBAUEN
+        let ticketText = `🎫 **Neues Ticket von ${modalInteraction.user.tag}** (ID: ${modalInteraction.user.id})\n`;
+        ticketText += `Kategorie: **${config.modalTitle}**\n`;
+
         for (const field of config.fields) {
             ticketText += `\n**${field.label}**\n${answers[field.id]}`;
         }
 
-        // Erste Frage = Betreff = Post-Titel
-        const subject = answers[config.fields[0].id];
+        console.log('📄 Ticket-Text erstellt');
 
-        // === 6. TICKET-POST ERSTELLEN ===
+        // 6. TICKET POST ERSTELLEN
         const post = await targetChannel.threads.create({
-            name: `🎫 ${subject}`,
+            name: `🎫 ${answers[config.fields[0].id]}`,
             message: { content: ticketText },
             reason: `Ticket von ${modalInteraction.user.tag}`
         });
 
-        // === 7. MAPS PFLEGEN (Persistenz!) ===
+        console.log('✅ Post erstellt:', post.id);
+
+        // 7. MAPS UPDATEN
         userIdToPostId.set(modalInteraction.user.id, post.id);
         postIdToUserId.set(post.id, modalInteraction.user.id);
 
-        // === 8. TEAM-ROLLE IN DEN POST ADDEN ===
-        const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
-        if (role) {
-            await Promise.all(
-                [...role.members.values()].map(member =>
-                    post.members.add(member.id).catch(() => {})
-                )
-            );
+        // 8. TEAM-ROLLE HINZUFÜGEN (optional, kann weg wenn Probleme)
+        try {
+            const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
+            if (role) {
+                await Promise.all(
+                    [...role.members.values()].map(member =>
+                        post.members.add(member.id).catch(() => {})
+                    )
+                );
+            }
+        } catch (err) {
+            console.warn('⚠️ Rollen-Add ignoriert:', err.message);
         }
 
-        // === 9. BESTÄTIGUNG AN DEN USER ===
+        // 9. BESTÄTIGUNG AN USER
         await modalInteraction.reply({
             content: `✅ Ticket erstellt!\n📎 [Zum Ticket](${post.url})`,
             flags: MessageFlags.Ephemeral
         });
 
-        console.log(`🎫 Ticket erstellt: ${modalInteraction.user.tag} | ${subject}`);
+        console.log('🎉 Ticket erfolgreich erstellt!');
 
     } catch (error) {
-        console.error('❌ Modal-Fehler:', error);
-        if (!modalInteraction.replied) {
+        console.error('💥 Fataler Fehler:', error);
+        
+        // Nur antworten wenn noch nicht geantwortet wurde
+        if (!modalInteraction.replied && !modalInteraction.deferred) {
             await modalInteraction.reply({
                 content: '❌ Da ist etwas schiefgelaufen.',
                 flags: MessageFlags.Ephemeral
@@ -377,5 +407,4 @@ client.on('modalSubmit', async (modalInteraction) => {
     }
 });
 
-console.log('✅ modalSubmit Event registriert:', !!client.eventNames().includes('modalSubmit'));
 client.login(process.env.TOKEN);

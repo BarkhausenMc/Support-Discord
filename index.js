@@ -191,7 +191,9 @@ client.on('messageCreate', async (message) => {
                 return; // WICHTIG: Hier stoppen, Button-Menü nicht mehr senden!
             }
         }
-
+            const MediaGalleryBuilder = new (require('discord.js').MediaGalleryBuilder)();
+            console.log('MediaGalleryBuilder methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(MediaGalleryBuilder)));
+            
             const pictureContainer = new ContainerBuilder()
                 .addMediaGalleryComponents(
                     new MediaGalleryBuilder()

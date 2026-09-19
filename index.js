@@ -34,7 +34,7 @@ const postIdToUserId = new Map();
 // const banner = new AttachmentBuilder('');
 
 const MODAL_CONFIG = {
-    ticket_support: {
+    generel_support: {
         modalTitle: '❓ Generell Support',
         fields: [
             {
@@ -63,7 +63,7 @@ const MODAL_CONFIG = {
             }
         ]
     },
-    ticket_sales: {
+    cooperation: {
         modalTitle: '🤝 Kooperation',
         fields: [
             {
@@ -84,7 +84,7 @@ const MODAL_CONFIG = {
             }
         ]
     },
-    ticket_other: {
+    staff_apply: {
         modalTitle: '📝 Staff Bewerbung',
         fields: [
             {

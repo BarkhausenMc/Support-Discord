@@ -32,6 +32,7 @@ const client = new Client({
 const userIdToPostId = new Map(); 
 const postIdToUserId = new Map(); 
 
+
 const MODAL_CONFIG = {
     generel_support: {
         modalTitle: '❓ Generell Support',
@@ -191,14 +192,14 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-            const pictureContainer = new ContainerBuilder()
-                .addMediaGalleryComponent(
-                    new MediaGalleryBuilder()
-                        .addItem(
-                            new MediaGalleryItemBuilder()
-                                .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png')
-                        )
-                );
+        const pictureContainer = new ContainerBuilder()
+            .addMediaGalleryComponents(
+                new MediaGalleryBuilder()
+                    .addMediaGalleryItems(
+                        new MediaGalleryItemBuilder()
+                            .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png')  
+                    )
+            );
 
             const categoryContainer = new ContainerBuilder()
             .addTextDisplayComponents(

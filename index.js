@@ -157,6 +157,59 @@ client.on('messageCreate', async (message) => {
     }
 });
 
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isButton()) return;
+
+    try {
+        // Prüfe ob User schon ein Ticket hat
+        const existingPostId = userIdToPostId.get(interaction.user.id);
+
+        if (existingPostId) {
+            await interaction.reply({
+                content: '🚫 Du hast bereits ein offenes Ticket!',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
+        // Kategoriename fürs Modal merken
+        const category = interaction.customId;
+
+        // ===== MODAL ERSTELLEN =====
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_modal_${category}`)      // ← Kategorie in der ID versteckt!
+            .setTitle('Neues Ticket')
+            .addComponents(
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId('ticket_subject')
+                        .setLabel('Betreff')
+                        .setStyle(TextInputStyle.Short)
+                        .setPlaceholder('Worum geht es kurz?')
+                        .setMinLength(5)
+                        .setMaxLength(100)
+                        .setRequired(true)
+                ),
+                new ActionRowBuilder().addComponents(
+                    new TextInputBuilder()
+                        .setCustomId('ticket_description')
+                        .setLabel('Beschreibung')
+                        .setStyle(TextInputStyle.Paragraph)
+                        .setPlaceholder('Beschreibe dein Problem ausführlich...')
+                        .setMinLength(10)
+                        .setMaxLength(1000)
+                        .setRequired(true)
+                )
+            );
+
+        // Modal anzeigen
+        await interaction.showModal(modal);
+
+    } catch (error) {
+        console.error('❌ Fehler:', error.message);
+    }
+});
+
 client.on('modalSubmit', async (modalInteraction) => {
     try {
         // Kategorie aus der Modal-ID extrahieren (ticket_modal_ticket_support → SUPPORT)

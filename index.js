@@ -39,7 +39,7 @@ const MODAL_CONFIG = {
         fields: [
             {
                 id: 'problem',
-                label: 'Wie lautet dein Anliegen?',
+                label: 'Anliegen',  // OK (12 Zeichen)
                 style: 'SHORT',
                 placeholder: 'z.B. Bot antwortet nicht',
                 required: true,
@@ -47,7 +47,7 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'problem_since_when',
-                label: 'Seit wann besteht das Problem?',
+                label: 'Seit wann?',  // OK (12 Zeichen)
                 style: 'SHORT',
                 placeholder: 'z.B. seit heute Morgen',
                 required: false,
@@ -55,9 +55,9 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'problem_description',
-                label: 'Beschreibe das Problem genau',
+                label: 'Details',  // OK (7 Zeichen)
                 style: 'PARAGRAPH',
-                placeholder: 'Was hast du versucht? Welche Fehlermeldungen kamen?',
+                placeholder: 'Was hast du versucht?',
                 required: true,
                 maxLength: 1000
             }
@@ -68,17 +68,17 @@ const MODAL_CONFIG = {
         fields: [
             {
                 id: 'cooperation_request',
-                label: 'Wie heißt dein Discord Server/Clan/Twitch usw. ?',
+                label: 'Dein Name/Server',  // ✅ 20 Zeichen (<45)
                 style: 'SHORT',
-                placeholder: 'z.B. https://discord.com/invite/yayk',
+                placeholder: 'Discord-Invite/Website',
                 required: true,
                 maxLength: 100
             },
             {
                 id: 'cooperation_why',
-                label: 'Wieso möchtest du mit uns eine Kooperation eingehen? ',
+                label: 'Warum Kooperation?',  // ✅ 19 Zeichen (<45)
                 style: 'PARAGRAPH',
-                // placeholder: '',
+                placeholder: 'Erzähl uns mehr...',
                 required: true,
                 maxLength: 1000
             }
@@ -89,25 +89,25 @@ const MODAL_CONFIG = {
         fields: [
             {
                 id: 'staff_apply',
-                label: 'Für welche Position möchteste du dich Bewerben?',
+                label: 'Position',  // ✅ 8 Zeichen (<45)
                 style: 'SHORT',
-                placeholder: 'z.B. Moderator, Helper, Admin, Developer',
+                placeholder: 'z.B. Moderator',
                 required: true,
                 maxLength: 100
             },
             {
                 id: 'staff_apply_why',
-                label: 'Wieso und warum möchtest du dich als Staff bewerben?',
+                label: 'Warum als Staff?',  // ✅ 17 Zeichen (<45)
                 style: 'PARAGRAPH',
-                // placeholder: '',
+                placeholder: 'Deine Gründe',
                 required: true,
                 maxLength: 1000
             },
             {
                 id: 'staff_apply_personal',
-                label: 'Wieso sollten wir genau dich als (deine ausgewählte Position) nehmen?',
+                label: 'Warum dich?',  // ✅ 12 Zeichen (<45)
                 style: 'PARAGRAPH',
-                // placeholder: '',
+                placeholder: 'Deine Stärken',
                 required: true,
                 maxLength: 1000
             }

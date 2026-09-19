@@ -113,15 +113,15 @@ client.on('messageCreate', async (message) => {
                         .addComponents(
                             new ButtonBuilder()
                                 .setCustomId('generel_support')
-                                .setLabel('`❓` Generell Support')
+                                .setLabel('❓ Generell Support')
                                 .setStyle(ButtonStyle.Secondary),
                             new ButtonBuilder()
                                 .setCustomId('cooperation')
-                                .setLabel('`🤝` Kooperation')
+                                .setLabel('🤝 Kooperation')
                                 .setStyle(ButtonStyle.Secondary),
                             new ButtonBuilder()
                                 .setCustomId('staff_apply')
-                                .setLabel('`📝` Staff Bewerbung')
+                                .setLabel('📝 Staff Bewerbung')
                                 .setStyle(ButtonStyle.Secondary)
                         )
                 );

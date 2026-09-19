@@ -192,12 +192,15 @@ client.on('messageCreate', async (message) => {
             }
         }
                 // BILD CONTAINER
+                // Bild direkt als Objekt, KEIN Builder
+                const mediaGallery = {
+                    items: [{
+                        url: 'https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png'
+                    }]
+                };
+
                 const pictureContainer = new ContainerBuilder()
-                    .addMediaGalleryComponents({
-                        items: [{
-                            url: 'https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png'
-                        }]
-                    });
+                    .addMediaGalleryComponents(mediaGallery);
 
                 // TEXT CONTAINER
                 const categoryContainer = new ContainerBuilder()

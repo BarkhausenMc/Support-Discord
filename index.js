@@ -193,15 +193,13 @@ client.on('messageCreate', async (message) => {
         }
             const MediaGalleryBuilder = new (require('discord.js').MediaGalleryBuilder)();
             console.log('MediaGalleryBuilder methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(MediaGalleryBuilder)));
-            
+
             const pictureContainer = new ContainerBuilder()
-                .addMediaGalleryComponents(
-                    new MediaGalleryBuilder()
-                        .addItem(
-                            new MediaGalleryItemBuilder()
-                                .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png')
-                        )
-                );
+                .addMediaGalleryComponents({
+                    items: [{
+                        url: 'https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png'
+                    }]
+                });
 
             const categoryContainer = new ContainerBuilder()
             .addTextDisplayComponents(

@@ -294,16 +294,6 @@ client.on('interactionCreate', async (interaction) => {
             userIdToPostId.set(interaction.user.id, post.id);
             postIdToUserId.set(post.id, interaction.user.id);
 
-            // Team-Rolle adden
-            const role = await targetChannel.guild.roles.fetch(process.env.ROLE_ID);
-            if (role) {
-                await Promise.all(
-                    [...role.members.values()].map(member =>
-                        post.members.add(member.id).catch(() => {})
-                    )
-                );
-            }
-
             // Bestätigung an User
             await interaction.reply({
                 content: `✅ Ticket erstellt!\n📎 [Zum Ticket](${post.url})`,

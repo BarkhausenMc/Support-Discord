@@ -192,13 +192,14 @@ client.on('messageCreate', async (message) => {
         }
 
             const pictureContainer = new ContainerBuilder()
-                .addMediaGalleryComponents(
+                .addMediaGalleryComponent(
                     new MediaGalleryBuilder()
-                        .setItems([
+                        .addItem(
                             new MediaGalleryItemBuilder()
                                 .setURL('https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png')
-                        ])
+                        )
                 );
+
             const categoryContainer = new ContainerBuilder()
             .addTextDisplayComponents(
                 new TextDisplayBuilder()

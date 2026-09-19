@@ -191,45 +191,46 @@ client.on('messageCreate', async (message) => {
                 return; // WICHTIG: Hier stoppen, Button-Menü nicht mehr senden!
             }
         }
-            const MediaGalleryBuilder = new (require('discord.js').MediaGalleryBuilder)();
-            console.log('MediaGalleryBuilder methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(MediaGalleryBuilder)));
+                // BILD CONTAINER
+                const pictureContainer = new ContainerBuilder()
+                    .addMediaGalleryComponents({
+                        items: [{
+                            url: 'https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png'
+                        }]
+                    });
 
-            const pictureContainer = new ContainerBuilder()
-                .addMediaGalleryComponents({
-                    items: [{
-                        url: 'https://minigames.flo.asksven.io/images/bot/Support-Discord-Bot.png'
-                    }]
+                // TEXT CONTAINER
+                const categoryContainer = new ContainerBuilder()
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder()
+                            .setContent('# `📩` Ticket Erstellen\n> *||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')
+                    );
+
+                // BUTTON CONTAINER
+                const buttonContainer = new ContainerBuilder()
+                    .addActionRowComponents(
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId('generel_support')
+                                    .setLabel('❓ Generell Support')
+                                    .setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder()
+                                    .setCustomId('cooperation')
+                                    .setLabel('🤝 Kooperation')
+                                    .setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder()
+                                    .setCustomId('staff_apply')
+                                    .setLabel('📝 Staff Bewerbung')
+                                    .setStyle(ButtonStyle.Secondary)
+                            )
+                    );
+
+                // SENDEN
+                await message.channel.send({
+                    components: [pictureContainer, categoryContainer, buttonContainer],
+                    flags: MessageFlags.IsComponentsV2
                 });
-
-            const categoryContainer = new ContainerBuilder()
-            .addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent('# `📩` Ticket Erstellen\n> *||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')
-            );
-
-            const buttonContainer = new ContainerBuilder()
-                .addActionRowComponents(
-                    new ActionRowBuilder()
-                        .addComponents(
-                            new ButtonBuilder()
-                                .setCustomId('generel_support')
-                                .setLabel('❓ Generell Support')
-                                .setStyle(ButtonStyle.Secondary),
-                            new ButtonBuilder()
-                                .setCustomId('cooperation')
-                                .setLabel('🤝 Kooperation')
-                                .setStyle(ButtonStyle.Secondary),
-                            new ButtonBuilder()
-                                .setCustomId('staff_apply')
-                                .setLabel('📝 Staff Bewerbung')
-                                .setStyle(ButtonStyle.Secondary)
-                        )
-                );
-
-            await message.channel.send({
-                components: [pictureContainer, categoryContainer, buttonContainer],
-                flags: MessageFlags.IsComponentsV2
-            });
 
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 

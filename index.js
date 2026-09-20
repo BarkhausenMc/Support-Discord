@@ -330,12 +330,11 @@ if (interaction.isModalSubmit()) {
 
         // Post erstellen
         const post = await targetChannel.threads.create({
-            name: `🎫 ${subject}`,  // ← subject muss hier definiert sein ODER durch user.tag ersetzen
+            name: `${interaction.user.tag}`,
             message: {
                 components: [modalContainer],
                 flags: MessageFlags.IsComponentsV2
             },
-            reason: `Ticket von ${interaction.user.tag}`
         });
 
         userIdToPostId.set(interaction.user.id, post.id);

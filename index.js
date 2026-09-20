@@ -313,30 +313,34 @@ client.on('interactionCreate', async (interaction) => {
             const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
 
             // Container erstellen
-            const container = new ContainerBuilder()
-                .setAccentColor(0x5865F2)
+            const modalContainer = new ContainerBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                        `## 🎫 Neues Ticket\n` +
-                        `**Von:** ${interaction.user.tag}\n` +
+                        `# 🎫 Neues Ticket\n` +
+                        `**Benutzer:** ${interaction.user.tag}\n` +
                         `**Kategorie:** ${config.modalTitle}`
                     )
-                );
+                )
+                .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1));
 
-            // Antworten hinzufügen
             for (const field of config.fields) {
                 container.addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
-                        `### ${field.label}\n${answers[field.id]}`
+                        `**${field.label}**\n${answers[field.id]}`
                     )
                 );
             }
+
+
+            // Betreff = erstes Feld
+            const subject = answers[config.fields[0].id];
+
 
             // Post erstellen
             const post = await targetChannel.threads.create({
                 name: interaction.user.tag,
                 message: {
-                    components: [container],
+                    components: [modalContainer],
                     flags: MessageFlags.IsComponentsV2
                 },
                 reason: `Ticket von ${interaction.user.tag}`

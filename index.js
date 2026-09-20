@@ -31,6 +31,8 @@ const client = new Client({
 
 const userIdToPostId = new Map(); 
 const postIdToUserId = new Map(); 
+const userIdToTicketPanel = new Map();
+
 
 
 const MODAL_CONFIG = {
@@ -332,25 +334,51 @@ client.on('interactionCreate', async (interaction) => {
             // Maps pflegen
             userIdToPostId.set(interaction.user.id, post.id);
             postIdToUserId.set(post.id, interaction.user.id);
+            
+            // Ticket-Panel finden und Buttons deaktivieren
+            const panelMessageId = userIdToTicketPanel.get(interaction.user.id);
 
-            // Buttons Deaktivieren
-            const deactivatedRows = [];
+            if (panelMessageId) {
+                try {
+                    const panelMessage = await interaction.channel.messages.fetch(panelMessageId);
 
-             const categories = Object.keys(MODAL_CONFIG);
-             const buttonRow = new ActionRowBuilder();
+                    const disabledButtonContainer = new ActionRowBuilder()
+                        .addComponents(
+                            new ButtonBuilder()
+                                .setCustomId('generel_support')
+                                .setLabel('❓ Generell Support')
+                                .setStyle(ButtonStyle.Secondary)
+                                .setDisabled(true),
 
-             for (const catId of categories) {
+                            new ButtonBuilder()
+                                .setCustomId('cooperation')
+                                .setLabel('🤝 Kooperation')
+                                .setStyle(ButtonStyle.Secondary)
+                                .setDisabled(true),
 
-                const isCurrentCategory = catId === categoryKey;
-                
-                const btn = new ButtonBuilder()
-                    .setCustomId(catId)
-                    .setLabel(MODAL_CONFIG[catId].modalTitle) 
-                    .setStyle(isCurrentCategory ? ButtonStyle.Primary : ButtonStyle.Secondary) 
-                    .setDisabled(true); 
-                
-                buttonRow.addComponents(btn);
+                            new ButtonBuilder()
+                                .setCustomId('staff_apply')
+                                .setLabel('📝 Staff Bewerbung')
+                                .setStyle(ButtonStyle.Secondary)
+                                .setDisabled(true)
+                        );
+
+                    await panelMessage.edit({
+                        components: [
+                            pictureContainer,
+                            categoryContainer,
+                            disabledButtonContainer
+                        ],
+                        flags: MessageFlags.IsComponentsV2
+                    });
+
+                } catch (error) {
+                    console.error('❌ Konnte Ticket-Buttons nicht deaktivieren:', error.message);
+                }
+
+                userIdToTicketPanel.delete(interaction.user.id);
             }
+
 
             // Bestätigung an User
             await interaction.reply({
@@ -391,7 +419,7 @@ client.on('interactionCreate', async (interaction) => {
 
     
     if (!interaction.isButton()) return;
-
+    userIdToTicketPanel.set(interaction.user.id, interaction.message.id);
     try {
         // === 1. TICKET-SCHON-OFFEN-CHECK ===
         const existingPostId = userIdToPostId.get(interaction.user.id);

@@ -334,22 +334,18 @@ client.on('interactionCreate', async (interaction) => {
             userIdToPostId.set(interaction.user.id, post.id);
             postIdToUserId.set(post.id, interaction.user.id);
 
-            // Bestätigung an User
-            const ticktCreatedContainer = new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder()
-                        .setContent('Dein Ticket wurde erfolgreich erstellt')
-                );
+        // ✅ HIER: Container für Bestätigung DEFINIEREN (innerhalb dieses Blocks!)
+        const ticketCreatedContainer = new ContainerBuilder()
+            .addTextDisplayComponents(
+                new TextDisplayBuilder()
+                    .setContent('✅ Dein Ticket wurde erfolgreich erstellt!')
+            );
 
-                await interaction.reply({
-                    components: [ticketCreatedContainer],
-                })
-
-                console.log(`🎉 Bestätigung gesendet an ${interaction.user.tag}`);
-            // await interaction.reply({
-            //     content: `✅ Ticket erstellt!`,
-            //     flags: MessageFlags.Ephemeral
-            // });
+        // Bestätigung an User senden MIT INTERACTION.REPLY
+        await interaction.reply({
+            components: [ticketCreatedContainer],
+            flags: MessageFlags.Ephemeral
+        });
 
             console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${subject}`);
 

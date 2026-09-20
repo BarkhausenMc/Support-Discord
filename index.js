@@ -312,20 +312,33 @@ client.on('interactionCreate', async (interaction) => {
             // Forum-Kanal holen
             const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
 
-            // Ticket-Text zusammenbauen
-            let ticketText = `🎫 **Neues Ticket von ${interaction.user.tag}** (ID: ${interaction.user.id})\n`;
-            ticketText += `Kategorie: **${config.modalTitle}**\n`;
-            for (const field of config.fields) {
-                ticketText += `\n**${field.label}**\n${answers[field.id]}`;
-            }
+            // Container erstellen
+            const container = new ContainerBuilder()
+                .setAccentColor(0x5865F2)
+                .addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `## 🎫 Neues Ticket\n` +
+                        `**Von:** ${interaction.user.tag}\n` +
+                        `**Kategorie:** ${config.modalTitle}`
+                    )
+                );
 
-            // Betreff = erstes Feld
-            const subject = answers[config.fields[0].id];
+            // Antworten hinzufügen
+            for (const field of config.fields) {
+                container.addTextDisplayComponents(
+                    new TextDisplayBuilder().setContent(
+                        `### ${field.label}\n${answers[field.id]}`
+                    )
+                );
+            }
 
             // Post erstellen
             const post = await targetChannel.threads.create({
-                name: `${interaction.user.tag}`,
-                message: { content: ticketText },
+                name: interaction.user.tag,
+                message: {
+                    components: [container],
+                    flags: MessageFlags.IsComponentsV2
+                },
                 reason: `Ticket von ${interaction.user.tag}`
             });
 

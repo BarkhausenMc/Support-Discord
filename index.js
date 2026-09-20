@@ -313,13 +313,25 @@ if (interaction.isModalSubmit()) {
         const modalContainer = new ContainerBuilder()
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
-                    `# 🎫 Neues Ticket\n` +
-                    addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
+                    `# 🎫 Neues Ticket`
+                )
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(1)
+            )
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
                     `**Benutzer:** ${interaction.user.tag}\n` +
                     `**Kategorie:** ${config.modalTitle}`
                 )
             )
-            .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1));
+            .addSeparatorComponents(
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(1)
+            );
 
         for (const field of config.fields) {
             modalContainer.addTextDisplayComponents(
@@ -328,6 +340,7 @@ if (interaction.isModalSubmit()) {
                 )
             );
         }
+
 
         // Post erstellen
         const post = await targetChannel.threads.create({

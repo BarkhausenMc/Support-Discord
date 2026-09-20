@@ -239,6 +239,46 @@ client.on('messageCreate', async (message) => {
     } catch (error) {
         console.error('❌ Fehler:', error.message);
     }
+
+     if (!message.channel.isThread()) return;
+    if (message.author.bot) return;
+    if (message.channel.parentId !== process.env.CHANNEL_ID) return;
+    if (message.id === message.channel.id) return; // Start-Nachricht überspringen
+
+    try {
+        console.log('📮 Team-Antwort in Post:', message.channel.name);
+
+        // 1. USER-ID AUS DER MAP HOLEN
+        let userId = postIdToUserId.get(message.channel.id);
+
+        // 2. FALLBACK: Map leer (Bot-Restart)? ID aus Start-Nachricht holen
+        if (!userId) {
+            console.log('⚠️ Map leer, suche ID aus Start-Nachricht...');
+            const starter = await message.channel.fetchStarterMessage();
+            const match = starter.content.match(/\(ID: (\d+)\)/);
+            if (!match) {
+                console.error('❌ Keine User-ID in Start-Nachricht gefunden!');
+                return;
+            }
+            userId = match[1];
+            postIdToUserId.set(message.channel.id, userId); // Cache für nächstes Mal
+        }
+
+        console.log('👤 User-ID gefunden:', userId);
+
+        // 3. DM AN DEN USER SENDEN
+        const user = await client.users.fetch(userId);
+        await user.send(`📬 **${message.author.username}:** ${message.content}`);
+
+        // 4. BESTÄTIGUNG IM POST SETZEN
+        await message.react('✅');
+
+        console.log(`📤 DM gesendet an ${user.tag}`);
+
+    } catch (error) {
+        console.error('❌ DM-Fehler:', error.message);
+        await message.react('⚠️');
+    }
 });
 
 client.on('interactionCreate', async (interaction) => {

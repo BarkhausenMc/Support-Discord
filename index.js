@@ -341,10 +341,11 @@ client.on('interactionCreate', async (interaction) => {
                         .setContent('Dein Ticket wurde erfolgreich erstellt')
                 );
 
-                await message.channel.send({
-                    components: [ticktCreatedContainer]
+                await interaction.reply({
+                    components: [ticketCreatedContainer],
                 })
 
+                console.log(`🎉 Bestätigung gesendet an ${interaction.user.tag}`);
             // await interaction.reply({
             //     content: `✅ Ticket erstellt!`,
             //     flags: MessageFlags.Ephemeral

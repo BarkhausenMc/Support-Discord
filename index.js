@@ -343,15 +343,14 @@ client.on('interactionCreate', async (interaction) => {
                         .addTextDisplayComponents(
                             new TextDisplayBuilder()
                                 .setContent(
-                                    '## 🎫 Ticket erfolgreich erstellt!'
+                                    '## ✅ Ticket erfolgreich erstellt!'
                                 )
                         )
-                        .addSeparatorComponents()
+                        .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
                         .addTextDisplayComponents(
                             new TextDisplayBuilder()
                                 .setContent(
-                                    'Dein Ticket wurde erfolgreich erstellt.\n' +
-                                    'Du kannst nun hier im Chat mit dem Support kommunizieren.'
+                                    '*|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*'
                                 )
                         )
                 ]

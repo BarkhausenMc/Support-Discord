@@ -350,7 +350,7 @@ client.on('interactionCreate', async (interaction) => {
                         .addTextDisplayComponents(
                             new TextDisplayBuilder()
                                 .setContent(
-                                    '*|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*'
+                                    '> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*'
                                 )
                         )
                 ]

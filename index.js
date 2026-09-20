@@ -312,7 +312,7 @@ client.on('interactionCreate', async (interaction) => {
             // Forum-Kanal holen
             const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
 
-            // Container erstellen
+            // Erstellen des Containers
             const modalContainer = new ContainerBuilder()
                 .addTextDisplayComponents(
                     new TextDisplayBuilder().setContent(
@@ -323,24 +323,20 @@ client.on('interactionCreate', async (interaction) => {
                 )
                 .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1));
 
+            // Hinzufügen der Felder – jetzt mit dem richtigen Namen!
             for (const field of config.fields) {
-                container.addTextDisplayComponents(
+                modalContainer.addTextDisplayComponents(  // ✅ Korrekt: modalContainer statt container
                     new TextDisplayBuilder().setContent(
                         `**${field.label}**\n${answers[field.id]}`
                     )
                 );
             }
 
-
-            // Betreff = erstes Feld
-            const subject = answers[config.fields[0].id];
-
-
-            // Post erstellen
+            // Beim Erstellen des Posts dann:
             const post = await targetChannel.threads.create({
                 name: interaction.user.tag,
                 message: {
-                    components: [modalContainer],
+                    components: [modalContainer],  // ✅ Auch hier den korrekten Namen nutzen
                     flags: MessageFlags.IsComponentsV2
                 },
                 reason: `Ticket von ${interaction.user.tag}`

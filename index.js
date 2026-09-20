@@ -345,10 +345,16 @@ if (interaction.isModalSubmit()) {
             flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
             components: [
                 new ContainerBuilder()
-                    .setAccentColor(0x57F287)
                     .addTextDisplayComponents(
                         new TextDisplayBuilder()
                             .setContent('## ✅ Ticket erfolgreich erstellt!')
+                    )
+
+                    .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
+
+                    .addTextDisplayComponents(
+                        new Text()
+                            .setContent('> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*')
                     )
             ]
         });

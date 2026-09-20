@@ -33,7 +33,6 @@ const userIdToPostId = new Map();
 const postIdToUserId = new Map(); 
 
 
-
 const MODAL_CONFIG = {
     generel_support: {
         modalTitle: '❓ Generell Support',
@@ -325,7 +324,7 @@ client.on('interactionCreate', async (interaction) => {
 
             // Post erstellen
             const post = await targetChannel.threads.create({
-                name: `${interaction.user.tag}`,
+                name: `🎫 ${subject}`,
                 message: { content: ticketText },
                 reason: `Ticket von ${interaction.user.tag}`
             });
@@ -333,7 +332,6 @@ client.on('interactionCreate', async (interaction) => {
             // Maps pflegen
             userIdToPostId.set(interaction.user.id, post.id);
             postIdToUserId.set(post.id, interaction.user.id);
-
 
             // Bestätigung an User
             await interaction.reply({
@@ -374,7 +372,7 @@ client.on('interactionCreate', async (interaction) => {
 
     
     if (!interaction.isButton()) return;
-    userIdToTicketPanel.set(interaction.user.id, interaction.message.id);
+
     try {
         // === 1. TICKET-SCHON-OFFEN-CHECK ===
         const existingPostId = userIdToPostId.get(interaction.user.id);

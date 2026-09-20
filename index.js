@@ -333,6 +333,25 @@ client.on('interactionCreate', async (interaction) => {
             userIdToPostId.set(interaction.user.id, post.id);
             postIdToUserId.set(post.id, interaction.user.id);
 
+            // Buttons Deaktivieren
+            const deactivatedRows = [];
+
+             const categories = Object.keys(MODAL_CONFIG);
+             const buttonRow = new ActionRowBuilder();
+
+             for (const catId of categories) {
+
+                const isCurrentCategory = catId === categoryKey;
+                
+                const btn = new ButtonBuilder()
+                    .setCustomId(catId)
+                    .setLabel(MODAL_CONFIG[catId].modalTitle) 
+                    .setStyle(isCurrentCategory ? ButtonStyle.Primary : ButtonStyle.Secondary) 
+                    .setDisabled(true); 
+                
+                buttonRow.addComponents(btn);
+            }
+
             // Bestätigung an User
             await interaction.reply({
                 flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,

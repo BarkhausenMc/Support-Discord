@@ -282,106 +282,90 @@ client.on('messageCreate', async (message) => {
 
 client.on('interactionCreate', async (interaction) => {
      // ===== TEIL 1: MODAL WURDE ABGESCHICKT =====
-    if (interaction.isModalSubmit()) {
-        try {
-            console.log('📝 Modal-Submit gekommen! CustomID:', interaction.customId);
-
-            // Kategorie aus der Modal-ID holen
-            const categoryKey = interaction.customId.replace('ticket_modal_', '');
-            const config = MODAL_CONFIG[categoryKey];
-            if (!config) {
-                console.warn('⚠️ Keine Config für:', categoryKey);
-                return;
-            }
-
-            // Alle Antworten einsammeln
-            const answers = {};
-            for (const field of config.fields) {
-                answers[field.id] = interaction.fields.getTextInputValue(field.id);
-            }
-
-            // Doppel-Check: schon ein Ticket offen?
-            if (userIdToPostId.has(interaction.user.id)) {
-                await interaction.reply({
-                    content: '🚫 Du hast bereits ein offenes Ticket!',
-                    flags: MessageFlags.Ephemeral
-                });
-                return;
-            }
-
-            // Forum-Kanal holen
-            const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-
-            // Erstellen des Containers
-            const modalContainer = new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `# 🎫 Neues Ticket\n` +
-                        `**Benutzer:** ${interaction.user.tag}\n` +
-                        `**Kategorie:** ${config.modalTitle}`
-                    )
-                )
-                .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1));
-
-            // Hinzufügen der Felder – jetzt mit dem richtigen Namen!
-            for (const field of config.fields) {
-                modalContainer.addTextDisplayComponents(  // ✅ Korrekt: modalContainer statt container
-                    new TextDisplayBuilder().setContent(
-                        `**${field.label}**\n${answers[field.id]}`
-                    )
-                );
-            }
-
-            // Beim Erstellen des Posts dann:
-            const post = await targetChannel.threads.create({
-                name: interaction.user.tag,
-                message: {
-                    components: [modalContainer],  // ✅ Auch hier den korrekten Namen nutzen
-                    flags: MessageFlags.IsComponentsV2
-                },
-                reason: `Ticket von ${interaction.user.tag}`
-            });
-
-            // Maps pflegen
-            userIdToPostId.set(interaction.user.id, post.id);
-            postIdToUserId.set(post.id, interaction.user.id);
-
-            // Bestätigung an User
-            await interaction.reply({
-                flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
-                components: [
-                    new ContainerBuilder()
-                        .setAccentColor(0x57F287)
-                        .addTextDisplayComponents(
-                            new TextDisplayBuilder()
-                                .setContent(
-                                    '## ✅ Ticket erfolgreich erstellt!'
-                                )
-                        )
-                        .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
-                        .addTextDisplayComponents(
-                            new TextDisplayBuilder()
-                                .setContent(
-                                    '> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*'
-                                )
-                        )
-                ]
-            });
-
-
-            console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${subject}`);
-
-        } catch (error) {
-            console.error('❌ Modal-Submit Fehler:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: '❌ Da ist etwas schiefgelaufen.',
-                    flags: MessageFlags.Ephemeral
-                }).catch(() => {});
-            }
+if (interaction.isModalSubmit()) {
+    try {
+        const categoryKey = interaction.customId.replace('ticket_modal_', '');
+        const config = MODAL_CONFIG[categoryKey];
+        if (!config) {
+            console.warn('⚠️ Keine Config für:', categoryKey);
+            return;
         }
-        return; // Wichtig: danach nicht mehr in die Button-Logik fallen
+
+        const answers = {};
+        for (const field of config.fields) {
+            answers[field.id] = interaction.fields.getTextInputValue(field.id);
+        }
+
+        if (userIdToPostId.has(interaction.user.id)) {
+            await interaction.reply({
+                content: '🚫 Du hast bereits ein offenes Ticket!',
+                flags: MessageFlags.Ephemeral
+            });
+            return;
+        }
+
+        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        // Subject definieren WENN du es noch brauchst
+        const subject = answers[config.fields[0].id];
+
+        // Container erstellen
+        const modalContainer = new ContainerBuilder()
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `# 🎫 Neues Ticket\n` +
+                    `**Benutzer:** ${interaction.user.tag}\n` +
+                    `**Kategorie:** ${config.modalTitle}`
+                )
+            )
+            .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1));
+
+        for (const field of config.fields) {
+            modalContainer.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `**${field.label}**\n${answers[field.id]}`
+                )
+            );
+        }
+
+        // Post erstellen
+        const post = await targetChannel.threads.create({
+            name: `🎫 ${subject}`,  // ← subject muss hier definiert sein ODER durch user.tag ersetzen
+            message: {
+                components: [modalContainer],
+                flags: MessageFlags.IsComponentsV2
+            },
+            reason: `Ticket von ${interaction.user.tag}`
+        });
+
+        userIdToPostId.set(interaction.user.id, post.id);
+        postIdToUserId.set(post.id, interaction.user.id);
+
+        await interaction.reply({
+            flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+            components: [
+                new ContainerBuilder()
+                    .setAccentColor(0x57F287)
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder()
+                            .setContent('## ✅ Ticket erfolgreich erstellt!')
+                    )
+            ]
+        });
+
+        console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${subject}`);
+
+    } catch (error) {
+        console.error('❌ Modal-Submit Fehler:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ Da ist etwas schiefgelaufen.',
+                flags: MessageFlags.Ephemeral
+            }).catch(() => {});
+        }
     }
+    return;
+}
 
     
     if (!interaction.isButton()) return;

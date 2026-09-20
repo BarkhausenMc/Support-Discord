@@ -353,7 +353,7 @@ if (interaction.isModalSubmit()) {
                     .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
 
                     .addTextDisplayComponents(
-                        new Text()
+                        new TextDisplayBuilder()
                             .setContent('> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*')
                     )
             ]

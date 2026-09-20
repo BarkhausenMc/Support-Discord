@@ -324,7 +324,7 @@ client.on('interactionCreate', async (interaction) => {
 
             // Post erstellen
             const post = await targetChannel.threads.create({
-                name: `🎫 ${subject}`,
+                name: `${interaction.user.tag}`,
                 message: { content: ticketText },
                 reason: `Ticket von ${interaction.user.tag}`
             });

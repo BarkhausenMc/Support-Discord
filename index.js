@@ -189,7 +189,7 @@ client.on('messageCreate', async (message) => {
             }
         }
 
-        // BILD CONTAINER (FIXED VERSION)
+        // BILD CONTAINER (CORRECTED)
         const pictureContainer = new ContainerBuilder()
             .addMediaGalleryComponents({
                 items: [{
@@ -199,6 +199,7 @@ client.on('messageCreate', async (message) => {
 
         // TEXT CONTAINER
         const categoryContainer = new ContainerBuilder()
+            .setAccentColor(0x6d4aff)  // Optional: lila Balken
             .addTextDisplayComponents(
                 new TextDisplayBuilder()
                     .setContent('# `📩` Ticket Erstellen\n> *||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')

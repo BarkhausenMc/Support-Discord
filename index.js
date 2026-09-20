@@ -159,7 +159,6 @@ client.on('clientReady', async () => {
     }
 });
 
-// ========== ERSTES EVENT: DM vom User → Bot antworten ==========
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
     if (message.channel.type !== 1) return; // Nur DMs
@@ -169,87 +168,95 @@ client.on('messageCreate', async (message) => {
         const existingPostId = userIdToPostId.get(message.author.id);
 
         if (existingPostId) {
+            // >>> FALL A: TICKET EXISTIERT SCHON >>>
             let post;
             try {
                 post = await client.channels.fetch(existingPostId);
             } catch (err) {
+                // Post existiert nicht mehr (gelöscht) → aufräumen
                 userIdToPostId.delete(message.author.id);
                 postIdToUserId.delete(existingPostId);
             }
 
             if (post) {
+                // Archiviert? Dann wieder öffnen
                 if (post.archived) {
                     await post.setArchived(false);
                 }
 
+                // Nachricht in den Post weiterleiten
                 await post.send(`📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`);
                 await message.react('📬');
                 console.log(`📤 Ticket-Nachricht von ${message.author.tag}`);
-                return; // WICHTIG: Stoppt hier komplett
+                return; // WICHTIG: Hier stoppen, Button-Menü nicht mehr senden!
             }
         }
+                // BILD CONTAINER
+                const pictureContainer = new ContainerBuilder()
+                    .addMediaGalleryComponents(
+                        new MediaGalleryBuilder()
+                            .addItems([
+                                new MediaGalleryItemBuilder()
+                                    .setURL('https://minigames.flo.asksven.io/images/bot/logosdb.png')
+                            ])
+                    );
 
-        // BILD CONTAINER (CORRECTED)
-        const pictureContainer = new ContainerBuilder()
-            .addMediaGalleryComponents({
-                items: [{
-                    url: 'https://minigames.flo.asksven.io/images/bot/logosdb.png'
-                }]
-            });
+                // TEXT CONTAINER
+                const categoryContainer = new ContainerBuilder()
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder()
+                            .setContent('# `📩` Ticket Erstellen\n> *||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')
+                    );
 
-        // TEXT CONTAINER
-        const categoryContainer = new ContainerBuilder()
-            .setAccentColor(0x6d4aff)  // Optional: lila Balken
-            .addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent('# `📩` Ticket Erstellen\n> *||Drücke den Button, der zu deinem Anliegen passt, um ein Ticket zu erstellen.||*')
-            );
+                // BUTTON CONTAINER
+                const buttonContainer = new ContainerBuilder()
+                    .addActionRowComponents(
+                        new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId('generel_support')
+                                    .setLabel('❓ Generell Support')
+                                    .setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder()
+                                    .setCustomId('cooperation')
+                                    .setLabel('🤝 Kooperation')
+                                    .setStyle(ButtonStyle.Secondary),
+                                new ButtonBuilder()
+                                    .setCustomId('staff_apply')
+                                    .setLabel('📝 Staff Bewerbung')
+                                    .setStyle(ButtonStyle.Secondary)
+                            )
+                    );
 
-        // BUTTON CONTAINER
-        const buttonContainer = new ContainerBuilder()
-            .addActionRowComponents(
-                new ActionRowBuilder()
-                    .addComponents(
-                        new ButtonBuilder()
-                            .setCustomId('generel_support')
-                            .setLabel('❓ Generell Support')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('cooperation')
-                            .setLabel('🤝 Kooperation')
-                            .setStyle(ButtonStyle.Secondary),
-                        new ButtonBuilder()
-                            .setCustomId('staff_apply')
-                            .setLabel('📝 Staff Bewerbung')
-                            .setStyle(ButtonStyle.Secondary)
-                    )
-            );
-
-        await message.channel.send({
-            components: [pictureContainer, categoryContainer, buttonContainer],
-            flags: MessageFlags.IsComponentsV2
-        });
+                // SENDEN
+                await message.channel.send({
+                    components: [pictureContainer, categoryContainer, buttonContainer],
+                    flags: MessageFlags.IsComponentsV2
+                });
 
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 
     } catch (error) {
         console.error('❌ Fehler:', error.message);
     }
+
 });
 
-// ========== ZWEITES EVENT: Team-Antwort im Post → DM an User ==========
+// ===== TEAM-ANTWORT IM POST → DM AN USER =====
 client.on('messageCreate', async (message) => {
-    // Diese Checks kommen JETZT am ANFANG des neuen Events!
+    // Nur Nachrichten IN Threads/Posts, nicht vom Bot selbst
     if (!message.channel.isThread()) return;
     if (message.author.bot) return;
     if (message.channel.parentId !== process.env.CHANNEL_ID) return;
-    if (message.id === message.channel.id) return;
+    if (message.id === message.channel.id) return; // Start-Nachricht überspringen
 
     try {
         console.log('📮 Team-Antwort in Post:', message.channel.name);
 
+        // 1. USER-ID AUS DER MAP HOLEN
         let userId = postIdToUserId.get(message.channel.id);
 
+        // 2. FALLBACK: Map leer (Bot-Restart)? ID aus Start-Nachricht holen
         if (!userId) {
             console.log('⚠️ Map leer, suche ID aus Start-Nachricht...');
             const starter = await message.channel.fetchStarterMessage();
@@ -259,14 +266,16 @@ client.on('messageCreate', async (message) => {
                 return;
             }
             userId = match[1];
-            postIdToUserId.set(message.channel.id, userId);
+            postIdToUserId.set(message.channel.id, userId); // Cache für nächstes Mal
         }
 
         console.log('👤 User-ID gefunden:', userId);
 
+        // 3. DM AN DEN USER SENDEN
         const user = await client.users.fetch(userId);
         await user.send(`📬 **${message.author.username}:** ${message.content}`);
 
+        // 4. BESTÄTIGUNG IM POST SETZEN
         await message.react('✅');
 
         console.log(`📤 DM gesendet an ${user.tag}`);

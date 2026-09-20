@@ -228,15 +228,9 @@ client.on('messageCreate', async (message) => {
                             )
                     );
 
-                console.log('📦 Sending message with flags:', {
-                    ephemeral: Boolean(MessageFlags.Ephemeral),
-                    isV2: Boolean(MessageFlags.IsComponentsV2),
-                    combined: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2
-                });
-
                 await message.channel.send({
                     components: [pictureContainer, categoryContainer, buttonContainer],
-                    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2
+                    flags:MessageFlags.IsComponentsV2
                 });
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);
 

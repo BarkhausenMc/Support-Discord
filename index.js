@@ -314,6 +314,7 @@ if (interaction.isModalSubmit()) {
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
                     `# 🎫 Neues Ticket\n` +
+                    addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
                     `**Benutzer:** ${interaction.user.tag}\n` +
                     `**Kategorie:** ${config.modalTitle}`
                 )

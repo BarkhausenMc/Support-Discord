@@ -230,7 +230,7 @@ client.on('messageCreate', async (message) => {
 
                 await message.channel.send({
                     components: [pictureContainer, categoryContainer, buttonContainer],
-                    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+                    flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2 
                 });
 
         console.log(`📨 Ticket-Options gesendet an ${message.author.tag}`);

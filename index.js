@@ -336,9 +336,27 @@ client.on('interactionCreate', async (interaction) => {
 
             // Bestätigung an User
             await interaction.reply({
-                content: `✅ Dein Ticket wurde erfolgreich erstellt!!`,
-                flags: MessageFlags.Ephemeral
+                flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+                components: [
+                    new ContainerBuilder()
+                        .setAccentColor(0x57F287)
+                        .addTextDisplayComponents(
+                            new TextDisplayBuilder()
+                                .setContent(
+                                    '## 🎫 Ticket erfolgreich erstellt!'
+                                )
+                        )
+                        .addSeparatorComponents()
+                        .addTextDisplayComponents(
+                            new TextDisplayBuilder()
+                                .setContent(
+                                    'Dein Ticket wurde erfolgreich erstellt.\n' +
+                                    'Du kannst nun hier im Chat mit dem Support kommunizieren.'
+                                )
+                        )
+                ]
             });
+
 
             console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${subject}`);
 

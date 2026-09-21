@@ -306,11 +306,19 @@ if (interaction.isModalSubmit()) {
 
         const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
 
-        // Subject definieren WENN du es noch brauchst
-        const subject = answers[config.fields[0].id];
+        // ✅ ID FÜR SPEICHERUNG ERSTELLEN
+        const hiddenID = `(ID: ${interaction.user.id})`;
 
-        // Container erstellen
+        // ✅ ALLES IN EINEM Container BAUEN (content + ID + Inhalt)
         const modalContainer = new ContainerBuilder()
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(hiddenID) // ← ID HIER, VOR DEM SPLITTER
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(1)
+            )
             .addTextDisplayComponents(
                 new TextDisplayBuilder().setContent(
                     `# 🎫 Neues Ticket`
@@ -333,6 +341,7 @@ if (interaction.isModalSubmit()) {
                     .setSpacing(1)
             );
 
+        // ✅ ALLE FELD-INHALTE IN EINEM TEXTDISPLAY
         let fieldContent = '';
         for (const field of config.fields) {
             fieldContent += `\n**${field.label}:** ${answers[field.id]}\n`;
@@ -342,15 +351,11 @@ if (interaction.isModalSubmit()) {
                 .setContent(fieldContent.trim())
         );
 
-
-        // Post erstellen
-        const hiddenID = `(ID: ${interaction.user.id})`;
-
+        // ✅ POST ERSTELLEN OHNE separate content Zeile
         const post = await targetChannel.threads.create({
             name: `${interaction.user.tag}`,
             message: {
-                content: hiddenID,
-                components: [modalContainer],
+                components: [modalContainer], // ← NUR components, kein content!
                 flags: MessageFlags.IsComponentsV2
             },
         });
@@ -366,9 +371,7 @@ if (interaction.isModalSubmit()) {
                         new TextDisplayBuilder()
                             .setContent(`## ✅ Ticket erfolgreich erstellt!\n${hiddenID}`)
                     )
-
                     .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
-
                     .addTextDisplayComponents(
                         new TextDisplayBuilder()
                             .setContent('> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*')
@@ -376,7 +379,7 @@ if (interaction.isModalSubmit()) {
             ]
         });
 
-        console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${subject}`);
+        console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${hiddenID}`);
 
     } catch (error) {
         console.error('❌ Modal-Submit Fehler:', error);

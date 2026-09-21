@@ -344,9 +344,12 @@ if (interaction.isModalSubmit()) {
 
 
         // Post erstellen
+        const hiddenID = `(ID: ${interaction.user.id})`;
+
         const post = await targetChannel.threads.create({
             name: `${interaction.user.tag}`,
             message: {
+                content: hiddenID,
                 components: [modalContainer],
                 flags: MessageFlags.IsComponentsV2
             },
@@ -361,7 +364,7 @@ if (interaction.isModalSubmit()) {
                 new ContainerBuilder()
                     .addTextDisplayComponents(
                         new TextDisplayBuilder()
-                            .setContent('## ✅ Ticket erfolgreich erstellt!')
+                            .setContent(`## ✅ Ticket erfolgreich erstellt!\n${hiddenID}`)
                     )
 
                     .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))

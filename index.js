@@ -333,13 +333,15 @@ if (interaction.isModalSubmit()) {
                     .setSpacing(1)
             );
 
-        for (const field of config.fields) {
+            let fieldContent = '';
+            for (const field of config.fields) {
+                fieldContent += `\n**${field.label}:** ${answers[field.id]}\n`;
+            }
             modalContainer.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(
-                    `**${field.label}**\n${answers[field.id]}`
-                )
+                new TextDisplayBuilder()
+                    .setContent(fieldContent.trim())
+                    .setStyle('Normal') 
             );
-        }
 
 
         // Post erstellen
@@ -430,6 +432,15 @@ if (interaction.isModalSubmit()) {
 
         // === 4. MODAL ANZEIGEN ===
         await interaction.showModal(modal);
+
+        try {
+    const existingMessage = await interaction.channel.messages.fetch(interaction.message.id).catch(() => null);
+    if (existingMessage) {
+        await existingMessage.delete().catch(() => {});
+    }
+} catch (deleteError) {
+    console.warn('⚠️ Konnte alte Nachricht nicht löschen:', deleteError.message);
+}
 
     } catch (error) {
         console.error('❌ Button-Fehler:', error.message);

@@ -13,8 +13,7 @@ const {
     MediaGalleryItemBuilder,
     ModalBuilder,
     TextInputBuilder,
-    TextInputStyle,
-    ChannelType
+    TextInputStyle
 } = require('discord.js');
 
 const Database = require('better-sqlite3');
@@ -32,7 +31,9 @@ const client = new Client({
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent
     ],
-    partials: [Partials.Channel]
+    partials: [
+        Partials.Channel
+    ]
 });
 
 
@@ -43,44 +44,78 @@ const client = new Client({
 const db = new Database('./tickets.db');
 
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
+
+// ======================================================
+// TABELLEN
+// ======================================================
+
+// Ein Eintrag pro Discord-User.
+// Ein User hat IMMER maximal einen Forum-Thread.
+db.exec(`
+    CREATE TABLE IF NOT EXISTS user_threads (
+        user_id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL
+    )
+`);
+
+
+// Ein Eintrag pro Ticket.
+// Ein User kann beliebig viele Tickets haben.
 db.exec(`
     CREATE TABLE IF NOT EXISTS tickets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-
         user_id TEXT NOT NULL,
-        thread_id TEXT NOT NULL UNIQUE,
-
+        thread_id TEXT NOT NULL,
         category TEXT NOT NULL,
-
         status TEXT NOT NULL DEFAULT 'open',
-
         created_at INTEGER NOT NULL,
-        closed_at INTEGER
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_tickets_user
-    ON tickets(user_id);
-
-    CREATE INDEX IF NOT EXISTS idx_tickets_thread
-    ON tickets(thread_id);
-
-    CREATE INDEX IF NOT EXISTS idx_tickets_status
-    ON tickets(status);
+        closed_at INTEGER,
+        closed_by TEXT
+    )
 `);
 
-console.log('💾 SQLite-Datenbank geladen.');
+
+// Pro User darf maximal EIN offenes Ticket existieren.
+db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS one_open_ticket_per_user
+    ON tickets(user_id)
+    WHERE status = 'open'
+`);
 
 
 // ======================================================
-// DATABASE FUNCTIONS
+// PREPARED STATEMENTS
 // ======================================================
+
+const getUserThread = db.prepare(`
+    SELECT *
+    FROM user_threads
+    WHERE user_id = ?
+`);
+
+const createUserThread = db.prepare(`
+    INSERT INTO user_threads (
+        user_id,
+        thread_id,
+        created_at
+    )
+    VALUES (?, ?, ?)
+`);
+
+const getTicket = db.prepare(`
+    SELECT *
+    FROM tickets
+    WHERE id = ?
+`);
 
 const getOpenTicketByUser = db.prepare(`
     SELECT *
     FROM tickets
     WHERE user_id = ?
-      AND status = 'open'
+    AND status = 'open'
     LIMIT 1
 `);
 
@@ -88,7 +123,7 @@ const getOpenTicketByThread = db.prepare(`
     SELECT *
     FROM tickets
     WHERE thread_id = ?
-      AND status = 'open'
+    AND status = 'open'
     LIMIT 1
 `);
 
@@ -105,15 +140,12 @@ const createTicket = db.prepare(`
 
 const closeTicket = db.prepare(`
     UPDATE tickets
-    SET status = 'closed',
-        closed_at = ?
-    WHERE thread_id = ?
-      AND status = 'open'
-`);
-
-const deleteTicket = db.prepare(`
-    DELETE FROM tickets
-    WHERE thread_id = ?
+    SET
+        status = 'closed',
+        closed_at = ?,
+        closed_by = ?
+    WHERE id = ?
+    AND status = 'open'
 `);
 
 
@@ -211,29 +243,152 @@ const MODAL_CONFIG = {
 
 
 // ======================================================
-// TICKET AUS DATENBANK PRÜFEN
+// HILFSFUNKTIONEN
 // ======================================================
 
-function getUserTicket(userId) {
-    return getOpenTicketByUser.get(userId);
-}
-
-function getThreadTicket(threadId) {
-    return getOpenTicketByThread.get(threadId);
+function getCategoryName(category) {
+    return MODAL_CONFIG[category]?.modalTitle || category;
 }
 
 
+function getCurrentTimestamp() {
+    return Date.now();
+}
+
+
 // ======================================================
-// TICKET-MENÜ
+// TICKET-BUTTON
 // ======================================================
 
-function createTicketMenu() {
+function createCloseButton(ticketId) {
+
+    return new ActionRowBuilder()
+        .addComponents(
+
+            new ButtonBuilder()
+                .setCustomId(`close_ticket:${ticketId}`)
+                .setLabel('🔒 Ticket schließen')
+                .setStyle(ButtonStyle.Danger)
+        );
+}
+
+
+// ======================================================
+// TICKET HEADER
+// ======================================================
+
+function createTicketContainer({
+    ticketId,
+    userTag,
+    category,
+    answers
+}) {
+
+    const container =
+        new ContainerBuilder()
+
+            .addTextDisplayComponents(
+
+                new TextDisplayBuilder()
+                    .setContent(
+                        `# 🎫 Ticket #${ticketId}`
+                    )
+            )
+
+            .addSeparatorComponents(
+
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(1)
+            )
+
+            .addTextDisplayComponents(
+
+                new TextDisplayBuilder()
+                    .setContent(
+                        `**Benutzer:** ${userTag}\n` +
+                        `**Kategorie:** ${getCategoryName(category)}\n` +
+                        `**Status:** 🟢 Offen`
+                    )
+            )
+
+            .addSeparatorComponents(
+
+                new SeparatorBuilder()
+                    .setDivider(true)
+                    .setSpacing(1)
+            );
+
+
+    let content = '';
+
+
+    for (const [label, value] of answers) {
+
+        content +=
+            `**${label}:** ${value || '*Keine Angabe*'}\n`;
+    }
+
+
+    container.addTextDisplayComponents(
+
+        new TextDisplayBuilder()
+            .setContent(content)
+    );
+
+
+    return container;
+}
+
+
+// ======================================================
+// TICKET GESCHLOSSEN CONTAINER
+// ======================================================
+
+function createClosedTicketContainer(ticket, closedByTag) {
+
+    return new ContainerBuilder()
+
+        .addTextDisplayComponents(
+
+            new TextDisplayBuilder()
+                .setContent(
+                    `# 🔒 Ticket #${ticket.id} geschlossen`
+                )
+        )
+
+        .addSeparatorComponents(
+
+            new SeparatorBuilder()
+                .setDivider(true)
+                .setSpacing(1)
+        )
+
+        .addTextDisplayComponents(
+
+            new TextDisplayBuilder()
+                .setContent(
+                    `**Kategorie:** ${getCategoryName(ticket.category)}\n` +
+                    `**Status:** 🔴 Geschlossen\n` +
+                    `**Geschlossen von:** ${closedByTag}`
+                )
+        );
+}
+
+
+// ======================================================
+// TICKET-OPTIONEN
+// ======================================================
+
+async function sendTicketOptions(channel) {
 
     const pictureContainer =
         new ContainerBuilder()
             .addMediaGalleryComponents(
+
                 new MediaGalleryBuilder()
                     .addItems([
+
                         new MediaGalleryItemBuilder()
                             .setURL(
                                 'https://minigames.flo.asksven.io/images/bot/logosdb.png'
@@ -245,6 +400,7 @@ function createTicketMenu() {
     const categoryContainer =
         new ContainerBuilder()
             .addTextDisplayComponents(
+
                 new TextDisplayBuilder()
                     .setContent(
                         '# `📩` Ticket Erstellen\n' +
@@ -256,6 +412,7 @@ function createTicketMenu() {
     const buttonContainer =
         new ContainerBuilder()
             .addActionRowComponents(
+
                 new ActionRowBuilder()
                     .addComponents(
 
@@ -277,23 +434,180 @@ function createTicketMenu() {
             );
 
 
-    return [
-        pictureContainer,
-        categoryContainer,
-        buttonContainer
-    ];
+    await channel.send({
+
+        components: [
+            pictureContainer,
+            categoryContainer,
+            buttonContainer
+        ],
+
+        flags:
+            MessageFlags.IsComponentsV2
+    });
 }
 
 
 // ======================================================
-// READY
+// USER THREAD FINDEN / ERSTELLEN
+// ======================================================
+
+async function getOrCreateUserThread(user) {
+
+    // ==============================================
+    // DB NACH THREAD SUCHEN
+    // ==============================================
+
+    let userThread =
+        getUserThread.get(user.id);
+
+
+    // ==============================================
+    // EXISTIERENDER THREAD
+    // ==============================================
+
+    if (userThread) {
+
+        try {
+
+            const thread =
+                await client.channels.fetch(
+                    userThread.thread_id
+                );
+
+
+            if (thread) {
+
+                // Falls archiviert → wieder öffnen
+                if (thread.archived) {
+
+                    await thread.setArchived(false)
+                        .catch(() => {});
+                }
+
+
+                return thread;
+            }
+
+        } catch (error) {
+
+            console.log(
+                `⚠️ Gespeicherter Thread nicht erreichbar: ${error.message}`
+            );
+        }
+    }
+
+
+    // ==============================================
+    // NEUEN THREAD ERSTELLEN
+    // ==============================================
+
+    const forum =
+        await client.channels.fetch(
+            process.env.CHANNEL_ID
+        );
+
+
+    if (!forum) {
+        throw new Error('Forum nicht gefunden.');
+    }
+
+
+    // Temporärer Starter.
+    // Der eigentliche Ticket-Inhalt wird danach gesendet.
+    const thread =
+        await forum.threads.create({
+
+            name:
+                `${user.tag}`,
+
+            message: {
+
+                content:
+                    `🎫 Support-Post für ${user.tag}`
+
+            }
+        });
+
+
+    // ==============================================
+    // DB SPEICHERN
+    // ==============================================
+
+    try {
+
+        createUserThread.run(
+            user.id,
+            thread.id,
+            getCurrentTimestamp()
+        );
+
+    } catch (error) {
+
+        // Falls durch Race Condition bereits vorhanden
+        console.error(
+            '❌ Fehler beim Speichern des User-Threads:',
+            error.message
+        );
+    }
+
+
+    console.log(
+        `📁 Neuer User-Thread erstellt: ${user.tag} → ${thread.id}`
+    );
+
+
+    return thread;
+}
+
+
+// ======================================================
+// NEUES TICKET ERSTELLEN
+// ======================================================
+
+function createNewTicket(userId, threadId, category) {
+
+    try {
+
+        const result =
+            createTicket.run(
+                userId,
+                threadId,
+                category,
+                getCurrentTimestamp()
+            );
+
+
+        return result.lastInsertRowid;
+
+    } catch (error) {
+
+        // UNIQUE INDEX:
+        // User hat bereits ein offenes Ticket
+
+        if (
+            error.message.includes(
+                'one_open_ticket_per_user'
+            )
+        ) {
+
+            return null;
+        }
+
+
+        throw error;
+    }
+}
+
+
+// ======================================================
+// BOT READY
 // ======================================================
 
 client.once('clientReady', async () => {
 
-    console.log('========================================');
     console.log('Bot ist Online ✅');
-    console.log('========================================');
+
 
     try {
 
@@ -303,94 +617,55 @@ client.once('clientReady', async () => {
             );
 
 
-        if (!forum) {
-            console.error('❌ Forum nicht gefunden!');
-            return;
-        }
-
-
         console.log(
-            `Forum gefunden: ${forum.name} | Type: ${forum.type}`
+            'Forum gefunden:',
+            forum?.name,
+            '| Type:',
+            forum?.type
         );
 
 
-        // ==================================================
-        // DB TICKETS ANZEIGEN
-        // ==================================================
+        // ==========================================
+        // DB ÜBERSICHT
+        // ==========================================
 
-        const result = db.prepare(`
-            SELECT COUNT(*) AS count
-            FROM tickets
-            WHERE status = 'open'
-        `).get();
+        const users =
+            db.prepare(
+                'SELECT COUNT(*) AS count FROM user_threads'
+            ).get();
 
-
-        console.log(
-            `💾 Offene Tickets in DB: ${result.count}`
-        );
-
-
-        // ==================================================
-        // OPTIONAL: THREADS AUFRÄUMEN
-        // ==================================================
 
         const tickets =
-            db.prepare(`
-                SELECT *
-                FROM tickets
-                WHERE status = 'open'
-            `).all();
+            db.prepare(
+                'SELECT COUNT(*) AS count FROM tickets'
+            ).get();
 
 
-        for (const ticket of tickets) {
-
-            try {
-
-                const thread =
-                    await client.channels.fetch(
-                        ticket.thread_id
-                    );
+        const openTickets =
+            db.prepare(
+                `SELECT COUNT(*) AS count
+                 FROM tickets
+                 WHERE status = 'open'`
+            ).get();
 
 
-                if (!thread) {
+        console.log(
+            `📂 User-Threads in DB: ${users.count}`
+        );
 
-                    console.log(
-                        `⚠️ Thread ${ticket.thread_id} nicht gefunden → DB-Eintrag wird gelöscht.`
-                    );
+        console.log(
+            `🎫 Tickets insgesamt: ${tickets.count}`
+        );
 
-                    deleteTicket.run(
-                        ticket.thread_id
-                    );
-
-                    continue;
-                }
-
-
-                console.log(
-                    `✅ Ticket aktiv: ${ticket.user_id} → ${ticket.thread_id}`
-                );
-
-
-            } catch (error) {
-
-                console.log(
-                    `⚠️ Thread ${ticket.thread_id} nicht erreichbar → DB-Eintrag wird gelöscht.`
-                );
-
-                deleteTicket.run(
-                    ticket.thread_id
-                );
-            }
-        }
-
-
-        console.log('💾 Ticket-Datenbank geprüft.');
+        console.log(
+            `🟢 Offene Tickets: ${openTickets.count}`
+        );
 
 
     } catch (error) {
 
         console.error(
-            '❌ Fehler beim Start:',
+            '❌ Ready-Fehler:',
             error
         );
     }
@@ -398,129 +673,66 @@ client.once('clientReady', async () => {
 
 
 // ======================================================
-// MESSAGE CREATE
+// USER → BOT DM
 // ======================================================
 
 client.on('messageCreate', async (message) => {
 
-    // Bots ignorieren
     if (message.author.bot) return;
 
+    // Nur DMs
+    if (message.channel.type !== 1) return;
 
-    // ==================================================
-    // DM → TICKET
-    // ==================================================
 
-    if (message.channel.type === ChannelType.DM) {
+    try {
 
-        try {
+        console.log(
+            `📨 DM von ${message.author.tag}`
+        );
 
-            console.log(
-                `📨 DM von ${message.author.tag}`
+
+        // ==========================================
+        // OFFENES TICKET SUCHEN
+        // ==========================================
+
+        const openTicket =
+            getOpenTicketByUser.get(
+                message.author.id
             );
 
 
-            // ==============================================
-            // TICKET AUS DB HOLEN
-            // ==============================================
+        // ==========================================
+        // OFFENES TICKET EXISTIERT
+        // ==========================================
 
-            const ticket =
-                getUserTicket(
-                    message.author.id
-                );
+        if (openTicket) {
 
+            try {
 
-            // ==============================================
-            // TICKET EXISTIERT
-            // ==============================================
-
-            if (ticket) {
-
-                console.log(
-                    `🎫 Ticket gefunden: ${ticket.thread_id}`
-                );
-
-
-                let thread;
-
-
-                try {
-
-                    thread =
-                        await client.channels.fetch(
-                            ticket.thread_id
-                        );
-
-                } catch (error) {
-
-                    console.error(
-                        `❌ Ticket-Thread konnte nicht geladen werden:`,
-                        error.message
+                const thread =
+                    await client.channels.fetch(
+                        openTicket.thread_id
                     );
-
-
-                    // DB-Eintrag entfernen,
-                    // weil Thread nicht mehr existiert
-                    deleteTicket.run(
-                        ticket.thread_id
-                    );
-
-
-                    // User informieren
-                    await message.channel.send(
-                        '⚠️ Dein bisheriges Ticket konnte nicht mehr gefunden werden. Bitte erstelle ein neues Ticket.'
-                    ).catch(() => {});
-
-
-                    return;
-                }
 
 
                 if (!thread) {
-
-                    await message.channel.send(
-                        '⚠️ Dein Ticket konnte nicht gefunden werden.'
-                    ).catch(() => {});
-
-                    return;
+                    throw new Error(
+                        'Thread nicht gefunden'
+                    );
                 }
 
 
-                // ==========================================
-                // ARCHIVIERTES TICKET ÖFFNEN
-                // ==========================================
-
+                // Falls archiviert
                 if (thread.archived) {
 
-                    try {
-
-                        await thread.setArchived(false);
-
-                        console.log(
-                            `📂 Ticket wieder geöffnet: ${thread.name}`
-                        );
-
-                    } catch (error) {
-
-                        console.error(
-                            '❌ Ticket konnte nicht geöffnet werden:',
-                            error.message
-                        );
-                    }
+                    await thread.setArchived(false)
+                        .catch(() => {});
                 }
-
-
-                // ==========================================
-                // USER-NACHRICHT INS TICKET
-                // ==========================================
-
-                const content =
-                    message.content?.trim() ||
-                    '*Kein Text*';
 
 
                 await thread.send(
-                    `📨 **${message.author.tag}:** ${content}`
+                    `📨 **${message.author.tag}:**\n` +
+                    `${message.content || '*Kein Text*'}`
                 );
 
 
@@ -529,60 +741,55 @@ client.on('messageCreate', async (message) => {
 
 
                 console.log(
-                    `📤 Nachricht von ${message.author.tag} → ${thread.name}`
+                    `📤 Nachricht zu Ticket #${openTicket.id} gesendet`
                 );
 
 
                 return;
+
+            } catch (error) {
+
+                console.error(
+                    '❌ Fehler beim Senden ins Ticket:',
+                    error.message
+                );
             }
-
-
-            // ==================================================
-            // KEIN TICKET
-            // ==================================================
-
-            console.log(
-                `ℹ️ Kein offenes Ticket für ${message.author.tag}`
-            );
-
-
-            await message.channel.send({
-
-                components:
-                    createTicketMenu(),
-
-                flags:
-                    MessageFlags.IsComponentsV2
-
-            });
-
-
-            console.log(
-                `📨 Ticket-Optionen gesendet an ${message.author.tag}`
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                '❌ DM-Verarbeitungsfehler:',
-                error
-            );
         }
 
 
-        return;
+        // ==========================================
+        // KEIN OFFENES TICKET
+        // ==========================================
+
+        await sendTicketOptions(
+            message.channel
+        );
+
+
+        console.log(
+            `📨 Ticket-Optionen gesendet an ${message.author.tag}`
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            '❌ DM-Fehler:',
+            error
+        );
     }
+});
 
 
-    // ==================================================
-    // TEAM → TICKET → USER
-    // ==================================================
+// ======================================================
+// TEAM → USER
+// ======================================================
 
-    if (!message.channel.isThread()) {
-        return;
-    }
+client.on('messageCreate', async (message) => {
 
+    if (message.author.bot) return;
+
+    if (!message.channel.isThread()) return;
 
     if (
         message.channel.parentId !==
@@ -594,108 +801,82 @@ client.on('messageCreate', async (message) => {
 
     try {
 
-        console.log(
-            `📮 Nachricht im Ticket: ${message.channel.name}`
-        );
-
-
-        // ==================================================
-        // TICKET AUS DB
-        // ==================================================
+        // ==========================================
+        // OFFENES TICKET DES THREADS
+        // ==========================================
 
         const ticket =
-            getThreadTicket(
+            getOpenTicketByThread.get(
                 message.channel.id
             );
 
 
+        // ==========================================
+        // KEIN OFFENES TICKET
+        // ==========================================
+
         if (!ticket) {
 
             console.log(
-                `⚠️ Kein offenes Ticket für Thread ${message.channel.id}`
+                `ℹ️ Nachricht in geschlossenem/leerem Thread ignoriert: ${message.channel.name}`
             );
 
             return;
         }
+
+
+        // ==========================================
+        // USER AUS DB
+        // ==========================================
+
+        const userId =
+            ticket.user_id;
 
 
         console.log(
-            `👤 User-ID: ${ticket.user_id}`
+            `👤 User für Ticket #${ticket.id}: ${userId}`
         );
 
 
-        // ==================================================
-        // USER HOLEN
-        // ==================================================
+        // ==========================================
+        // USER LADEN
+        // ==========================================
 
-        let user;
-
-
-        try {
-
-            user =
-                await client.users.fetch(
-                    ticket.user_id
-                );
-
-        } catch (error) {
-
-            console.error(
-                `❌ User konnte nicht geladen werden:`,
-                error.message
-            );
-
-            return;
-        }
-
-
-        // ==================================================
-        // NACHRICHT AN USER
-        // ==================================================
-
-        try {
-
-            const content =
-                message.content?.trim() ||
-                '*Keine Textnachricht*';
-
-
-            await user.send(
-                content
+        const user =
+            await client.users.fetch(
+                userId
             );
 
 
-            await message.react('📨')
-                .catch(() => {});
+        // ==========================================
+        // DM
+        // ==========================================
+
+        await user.send(
+            message.content ||
+            '*Keine Textnachricht*'
+        );
 
 
-            console.log(
-                `📤 DM erfolgreich an ${user.tag}`
-            );
+        await message.react('📨')
+            .catch(() => {});
 
 
-        } catch (error) {
-
-            console.error(
-                `❌ DM an ${user.tag} nicht möglich:`,
-                error.message
-            );
+        console.log(
+            `📤 DM für Ticket #${ticket.id} an ${user.tag} gesendet`
+        );
 
 
-            await message.react('⚠️')
-                .catch(() => {});
-
-
-            // Wichtig:
-            // Ticket bleibt in DB!
-            // Wir löschen es NICHT.
-        }
     } catch (error) {
 
         console.error(
-            '❌ Team-Nachrichten-Fehler:',
-            error
+            '❌ DM-Fehler:',
+            error.message
         );
+
+
+        await message.react('⚠️')
+            .catch(() => {});
     }
 });
 
@@ -708,302 +889,196 @@ client.on('interactionCreate', async (interaction) => {
 
 
     // ==================================================
-    // MODAL SUBMIT
-    // ==================================================
-
-    if (interaction.isModalSubmit()) {
-
-        try {
-
-            const categoryKey =
-                interaction.customId.replace(
-                    'ticket_modal_',
-                    ''
-                );
-
-
-            const config =
-                MODAL_CONFIG[categoryKey];
-
-
-            if (!config) {
-
-                console.warn(
-                    `⚠️ Keine Modal-Config: ${categoryKey}`
-                );
-
-                return;
-            }
-
-
-            // ==========================================
-            // PRÜFEN OB BEREITS TICKET EXISTIERT
-            // ==========================================
-
-            const existingTicket =
-                getUserTicket(
-                    interaction.user.id
-                );
-
-
-            if (existingTicket) {
-
-                await interaction.reply({
-
-                    content:
-                        '🚫 Du hast bereits ein offenes Ticket!',
-
-                    flags:
-                        MessageFlags.Ephemeral
-
-                });
-
-                return;
-            }
-
-
-            // ==========================================
-            // FORMULAR AUSLESEN
-            // ==========================================
-
-            const answers = {};
-
-
-            for (const field of config.fields) {
-
-                answers[field.id] =
-                    interaction.fields.getTextInputValue(
-                        field.id
-                    );
-            }
-
-
-            // ==========================================
-            // FORUM HOLEN
-            // ==========================================
-
-            const targetChannel =
-                await client.channels.fetch(
-                    process.env.CHANNEL_ID
-                );
-
-
-            if (!targetChannel) {
-
-                throw new Error(
-                    'Forum konnte nicht gefunden werden.'
-                );
-            }
-
-
-            // ==========================================
-            // TICKET CONTAINER
-            // ==========================================
-
-            const modalContainer =
-                new ContainerBuilder()
-
-                    .addTextDisplayComponents(
-
-                        new TextDisplayBuilder()
-                            .setContent(
-                                `## 🎫 Neues Ticket\n` +
-                                `**Benutzer:** ${interaction.user.tag}\n` +
-                                `**Kategorie:** ${config.modalTitle}`
-                            )
-                    )
-
-                    .addSeparatorComponents(
-
-                        new SeparatorBuilder()
-                            .setDivider(true)
-                            .setSpacing(1)
-                    );
-
-
-            // ==========================================
-            // FORMULAR-ANTWORTEN
-            // ==========================================
-
-            let fieldContent = '';
-
-
-            for (const field of config.fields) {
-
-                const answer =
-                    answers[field.id] ||
-                    '*Keine Angabe*';
-
-
-                fieldContent +=
-                    `**${field.label}:** ${answer}\n`;
-            }
-
-
-            modalContainer.addTextDisplayComponents(
-
-                new TextDisplayBuilder()
-                    .setContent(
-                        fieldContent
-                    )
-            );
-
-
-            // ==========================================
-            // THREAD ERSTELLEN
-            // ==========================================
-
-            const post =
-                await targetChannel.threads.create({
-
-                    name:
-                        interaction.user.tag,
-
-                    message: {
-
-                        components: [
-                            modalContainer
-                        ],
-
-                        flags:
-                            MessageFlags.IsComponentsV2
-                    }
-                });
-
-
-            // ==========================================
-            // DB EINTRAG ERSTELLEN
-            // ==========================================
-
-            try {
-
-                createTicket.run(
-
-                    interaction.user.id,
-
-                    post.id,
-
-                    categoryKey,
-
-                    Date.now()
-                );
-
-
-            } catch (dbError) {
-
-                console.error(
-                    '❌ DB-Fehler beim Ticket:',
-                    dbError
-                );
-
-
-                // Falls DB-Eintrag nicht funktioniert,
-                // Thread wieder löschen.
-                await post.delete()
-                    .catch(() => {});
-
-
-                throw dbError;
-            }
-
-
-            // ==========================================
-            // BESTÄTIGUNG
-            // ==========================================
-
-            await interaction.reply({
-
-                flags:
-                    MessageFlags.Ephemeral |
-                    MessageFlags.IsComponentsV2,
-
-                components: [
-
-                    new ContainerBuilder()
-
-                        .addTextDisplayComponents(
-
-                            new TextDisplayBuilder()
-                                .setContent(
-                                    '## ✅ Ticket erfolgreich erstellt!'
-                                )
-                        )
-
-                        .addSeparatorComponents(
-
-                            new SeparatorBuilder()
-                                .setDivider(true)
-                                .setSpacing(1)
-                        )
-
-                        .addTextDisplayComponents(
-
-                            new TextDisplayBuilder()
-                                .setContent(
-                                    '> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*'
-                                )
-                        )
-                ]
-            });
-
-
-            console.log(
-                `🎫 Ticket erstellt: ${interaction.user.tag}`
-            );
-
-            console.log(
-                `   User: ${interaction.user.id}`
-            );
-
-            console.log(
-                `   Thread: ${post.id}`
-            );
-
-            console.log(
-                `   Kategorie: ${categoryKey}`
-            );
-
-
-        } catch (error) {
-
-            console.error(
-                '❌ Modal-Submit Fehler:',
-                error
-            );
-
-
-            if (
-                !interaction.replied &&
-                !interaction.deferred
-            ) {
-
-                await interaction.reply({
-
-                    content:
-                        '❌ Beim Erstellen des Tickets ist ein Fehler aufgetreten.',
-
-                    flags:
-                        MessageFlags.Ephemeral
-
-                }).catch(() => {});
-            }
-        }
-
-
-        return;
-    }
-
-
-    // ==================================================
     // BUTTON
     // ==================================================
 
-    if (!interaction.isButton()) {
-        return;
-    }
+    if (interaction.isButton()) {
+
+        // ==============================================
+        // TICKET SCHLIESSEN
+        // ==============================================
+
+        if (
+            interaction.customId.startsWith(
+                'close_ticket:'
+            )
+        ) {
+
+            try {
+
+                const ticketId =
+                    Number(
+                        interaction.customId.split(':')[1]
+                    );
 
 
-    try {
+                if (!ticketId) {
+
+                    await interaction.reply({
+
+                        content:
+                            '❌ Ungültige Ticket-ID.',
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    });
+
+                    return;
+                }
+
+
+                // ==========================================
+                // TICKET LADEN
+                // ==========================================
+
+                const ticket =
+                    getTicket.get(ticketId);
+
+
+                if (!ticket) {
+
+                    await interaction.reply({
+
+                        content:
+                            '❌ Dieses Ticket existiert nicht mehr.',
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    });
+
+                    return;
+                }
+
+
+                // ==========================================
+                // BEREITS GESCHLOSSEN
+                // ==========================================
+
+                if (ticket.status === 'closed') {
+
+                    await interaction.reply({
+
+                        content:
+                            'ℹ️ Dieses Ticket ist bereits geschlossen.',
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    });
+
+                    return;
+                }
+
+
+                // ==========================================
+                // TICKET SCHLIESSEN
+                // ==========================================
+
+                closeTicket.run(
+                    getCurrentTimestamp(),
+                    interaction.user.id,
+                    ticketId
+                );
+
+
+                // ==========================================
+                // TICKET NEU LADEN
+                // ==========================================
+
+                const closedTicket =
+                    getTicket.get(ticketId);
+
+
+                // ==========================================
+                // GESCHLOSSEN-NACHRICHT
+                // ==========================================
+
+                const closedContainer =
+                    createClosedTicketContainer(
+                        closedTicket,
+                        interaction.user.tag
+                    );
+
+
+                await interaction.channel.send({
+
+                    components: [
+                        closedContainer
+                    ],
+
+                    flags:
+                        MessageFlags.IsComponentsV2
+                });
+
+
+                // ==========================================
+                // USER INFORMIEREN
+                // ==========================================
+
+                try {
+
+                    const user =
+                        await client.users.fetch(
+                            ticket.user_id
+                        );
+
+
+                    await user.send(
+                        `🔒 Dein Ticket **#${ticket.id}** wurde geschlossen.\n\n` +
+                        `Wenn du ein neues Anliegen hast, kannst du einfach wieder eine DM an mich senden.`
+                    );
+
+                } catch (dmError) {
+
+                    console.log(
+                        `⚠️ User konnte nicht über Schließung informiert werden: ${dmError.message}`
+                    );
+                }
+
+
+                await interaction.reply({
+
+                    content:
+                        `🔒 Ticket #${ticket.id} wurde geschlossen.`,
+
+                    flags:
+                        MessageFlags.Ephemeral
+                });
+
+
+                console.log(
+                    `🔒 Ticket #${ticket.id} geschlossen von ${interaction.user.tag}`
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    '❌ Fehler beim Schließen:',
+                    error
+                );
+
+
+                if (!interaction.replied) {
+
+                    await interaction.reply({
+
+                        content:
+                            '❌ Das Ticket konnte nicht geschlossen werden.',
+
+                        flags:
+                            MessageFlags.Ephemeral
+                    }).catch(() => {});
+                }
+            }
+
+
+            return;
+        }
+
+
+        // ==============================================
+        // NORMALE TICKET-BUTTONS
+        // ==============================================
 
         const category =
             interaction.customId;
@@ -1013,36 +1088,28 @@ client.on('interactionCreate', async (interaction) => {
             MODAL_CONFIG[category];
 
 
-        if (!config) {
-
-            console.warn(
-                `⚠️ Unbekannter Button: ${category}`
-            );
-
-            return;
-        }
+        if (!config) return;
 
 
         // ==============================================
-        // DB CHECK
+        // PRÜFEN OB OFFENES TICKET
         // ==============================================
 
-        const existingTicket =
-            getUserTicket(
+        const openTicket =
+            getOpenTicketByUser.get(
                 interaction.user.id
             );
 
 
-        if (existingTicket) {
+        if (openTicket) {
 
             await interaction.reply({
 
                 content:
-                    '🚫 Du hast bereits ein offenes Ticket!',
+                    `🚫 Du hast bereits ein offenes Ticket (#${openTicket.id})!`,
 
                 flags:
                     MessageFlags.Ephemeral
-
             });
 
             return;
@@ -1083,6 +1150,7 @@ client.on('interactionCreate', async (interaction) => {
                             )
 
                             .setStyle(
+
                                 field.style === 'SHORT'
                                     ? TextInputStyle.Short
                                     : TextInputStyle.Paragraph
@@ -1109,110 +1177,266 @@ client.on('interactionCreate', async (interaction) => {
         );
 
 
-    } catch (error) {
-
-        console.error(
-            '❌ Button-Fehler:',
-            error
-        );
+        return;
+    }
 
 
-        if (
-            !interaction.replied &&
-            !interaction.deferred
-        ) {
+    // ==================================================
+    // MODAL SUBMIT
+    // ==================================================
+
+    if (interaction.isModalSubmit()) {
+
+        try {
+
+            const category =
+                interaction.customId.replace(
+                    'ticket_modal_',
+                    ''
+                );
+
+
+            const config =
+                MODAL_CONFIG[category];
+
+
+            if (!config) {
+
+                console.warn(
+                    `⚠️ Keine Config für ${category}`
+                );
+
+                return;
+            }
+
+
+            // ==========================================
+            // NOCHMAL PRÜFEN
+            // ==========================================
+
+            const existingTicket =
+                getOpenTicketByUser.get(
+                    interaction.user.id
+                );
+
+
+            if (existingTicket) {
+
+                await interaction.reply({
+
+                    content:
+                        `🚫 Du hast bereits ein offenes Ticket (#${existingTicket.id})!`,
+
+                    flags:
+                        MessageFlags.Ephemeral
+                });
+
+                return;
+            }
+
+
+            // ==========================================
+            // ANTWORTEN
+            // ==========================================
+
+            const answers = [];
+
+
+            for (const field of config.fields) {
+
+                const value =
+                    interaction.fields.getTextInputValue(
+                        field.id
+                    );
+
+
+                answers.push([
+                    field.label,
+                    value
+                ]);
+            }
+
+
+            // ==========================================
+            // USER THREAD
+            // ==========================================
+
+            const thread =
+                await getOrCreateUserThread(
+                    interaction.user
+                );
+
+
+            // ==========================================
+            // TICKET ERSTELLEN
+            // ==========================================
+
+            const ticketId =
+                createNewTicket(
+                    interaction.user.id,
+                    thread.id,
+                    category
+                );
+
+
+            // ==========================================
+            // RACE CONDITION
+            // ==========================================
+
+            if (!ticketId) {
+
+                const ticket =
+                    getOpenTicketByUser.get(
+                        interaction.user.id
+                    );
+
+
+                await interaction.reply({
+
+                    content:
+                        `🚫 Du hast bereits ein offenes Ticket (#${ticket?.id || '?'})!`,
+
+                    flags:
+                        MessageFlags.Ephemeral
+                });
+
+                return;
+            }
+
+
+            // ==========================================
+            // TICKET CONTAINER
+            // ==========================================
+
+            const ticketContainer =
+                createTicketContainer({
+
+                    ticketId,
+                    userTag:
+                        interaction.user.tag,
+                    category,
+                    answers
+                });
+
+
+            // ==========================================
+            // CLOSE BUTTON
+            // ==========================================
+
+            const closeButton =
+                createCloseButton(
+                    ticketId
+                );
+
+
+            // ==========================================
+            // TICKET IN THREAD SENDEN
+            // ==========================================
+
+            await thread.send({
+
+                components: [
+                    ticketContainer,
+                    closeButton
+                ],
+
+                flags:
+                    MessageFlags.IsComponentsV2
+            });
+
+
+            // ==========================================
+            // BESTÄTIGUNG
+            // ==========================================
 
             await interaction.reply({
 
-                content:
-                    '❌ Da ist etwas schiefgelaufen.',
-
                 flags:
-                    MessageFlags.Ephemeral
+                    MessageFlags.Ephemeral |
+                    MessageFlags.IsComponentsV2,
 
-            }).catch(() => {});
-        }
-    }
-});
+                components: [
 
+                    new ContainerBuilder()
 
-// ======================================================
-// THREAD DELETE
-// ======================================================
+                        .addTextDisplayComponents(
 
-client.on('threadDelete', (thread) => {
+                            new TextDisplayBuilder()
+                                .setContent(
+                                    `## ✅ Ticket #${ticketId} erfolgreich erstellt!`
+                                )
+                        )
 
-    try {
+                        .addSeparatorComponents(
 
-        const ticket =
-            getThreadTicket(
-                thread.id
-            );
+                            new SeparatorBuilder()
+                                .setDivider(true)
+                                .setSpacing(1)
+                        )
 
+                        .addTextDisplayComponents(
 
-        if (ticket) {
-
-            deleteTicket.run(
-                thread.id
-            );
+                            new TextDisplayBuilder()
+                                .setContent(
+                                    '> *|| Dein Anliegen wurde an den Support weitergeleitet. ||*'
+                                )
+                        )
+                ]
+            });
 
 
             console.log(
-                `🗑️ Ticket aus DB entfernt: ${thread.id}`
+                `🎫 Ticket #${ticketId} erstellt | ${interaction.user.tag} | ${category}`
             );
+
+
+        } catch (error) {
+
+            console.error(
+                '❌ Modal-Submit Fehler:',
+                error
+            );
+
+
+            if (
+                !interaction.replied &&
+                !interaction.deferred
+            ) {
+
+                await interaction.reply({
+
+                    content:
+                        '❌ Beim Erstellen des Tickets ist ein Fehler aufgetreten.',
+
+                    flags:
+                        MessageFlags.Ephemeral
+                }).catch(() => {});
+            }
         }
-
-    } catch (error) {
-
-        console.error(
-            '❌ Fehler beim Löschen des DB-Tickets:',
-            error
-        );
     }
 });
 
 
 // ======================================================
-// GRACEFUL SHUTDOWN
+// FEHLERHANDLING
 // ======================================================
 
-function shutdown() {
+process.on('uncaughtException', error => {
 
-    console.log(
-        '🛑 Bot wird beendet...'
+    console.error(
+        '❌ Uncaught Exception:',
+        error
     );
+});
 
 
-    try {
+process.on('unhandledRejection', error => {
 
-        db.close();
-
-        console.log(
-            '💾 Datenbank geschlossen.'
-        );
-
-    } catch (error) {
-
-        console.error(
-            '❌ Fehler beim Schließen der DB:',
-            error
-        );
-    }
-
-
-    process.exit(0);
-}
-
-
-process.on(
-    'SIGINT',
-    shutdown
-);
-
-process.on(
-    'SIGTERM',
-    shutdown
-);
+    console.error(
+        '❌ Unhandled Rejection:',
+        error
+    );
+});
 
 
 // ======================================================

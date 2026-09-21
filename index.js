@@ -308,7 +308,7 @@ client.on('interactionCreate', async (interaction) => {
             );
             
             modalContainer.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(`${answers[field.id]}`)
+                new TextDisplayBuilder().setContent(```${answers[field.id]}```)
             );
 
             if (field.id !== config.fields[config.fields.length - 1].id) {

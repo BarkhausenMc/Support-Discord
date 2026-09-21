@@ -239,132 +239,124 @@ client.on('messageCreate', async (message) => {
 client.on('interactionCreate', async (interaction) => {
     // ===== TEIL 1: MODAL WURDE ABGESCHICKT =====
     if (interaction.isModalSubmit()) {
-        try {
-            const categoryKey = interaction.customId.replace('ticket_modal_', '');
-            const config = MODAL_CONFIG[categoryKey];
-            if (!config) {
-                console.warn('⚠️ Keine Config für:', categoryKey);
-                return;
-            }
+    try {
+        const categoryKey = interaction.customId.replace('ticket_modal_', '');
+        const config = MODAL_CONFIG[categoryKey];
+        if (!config) {
+            console.warn('⚠️ Keine Config für:', categoryKey);
+            return;
+        }
 
-            const answers = {};
-            for (const field of config.fields) {
-                answers[field.id] = interaction.fields.getTextInputValue(field.id);
-            }
+        const answers = {};
+        for (const field of config.fields) {
+            answers[field.id] = interaction.fields.getTextInputValue(field.id);
+        }
 
-            if (userIdToPostId.has(interaction.user.id)) {
-                await interaction.reply({
-                    content: '🚫 Du hast bereits ein offenes Ticket!',
-                    flags: MessageFlags.Ephemeral
-                });
-                return;
-            }
-
-            // 1. ALTE DM-NACHRICHT LÖSCHEN (Punkt 1 deiner Wünsche)
-            const oldDmMessageId = dmMessageIds.get(interaction.user.id);
-            if (oldDmMessageId) {
-                try {
-                    // Hole die DM-Nachricht und lösche sie
-                    const channel = await interaction.user.createDM();
-                    const msg = await channel.messages.fetch(oldDmMessageId);
-                    await msg.delete();
-                    console.log('✅ Alte Ticket-Buttons gelöscht.');
-                } catch (err) {
-                    console.warn('⚠️ Konnte alte DM-Nachricht nicht löschen (evtl. schon gelöscht?):', err.message);
-                }
-                // ID aus Map entfernen
-                dmMessageIds.delete(interaction.user.id);
-            }
-
-            const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
-
-            // 2. NEUER, ANPASSBARER CONTAINER FÜR DAS TICKET (Punkt 2 deiner Wünsche)
-            const modalContainer = new ContainerBuilder()
-                // Header Bereich
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent('# 🎫 Neues Ticket eröffnet')
-                )
-                .addSeparatorComponents(
-                    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
-                )
-                // User Info Block
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder().setContent(
-                        `**Von:** ${interaction.user.tag}\n` +
-                        `**Kategorie:** ${config.modalTitle}`
-                    ).setColor('#6d4aff') // Optional: Farbe für den Text (wird je nach Client unterstützt)
-                )
-                .addSeparatorComponents(
-                    new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
-                );
-
-            // Dynamische Felder hinzufügen - Hier ist die Anpassbarkeit!
-            for (const field of config.fields) {
-                // Wir fügen ein Text-Element für das Label (fett) und eines für den Inhalt hinzu
-                // Oder kombinieren sie, wie dir lieber ist. Hier eine saubere Variante:
-                
-                modalContainer.addTextDisplayComponents(
-                    new TextDisplayBuilder()
-                        .setContent(`**${field.label}**`)
-                        .setColor('#aaaaaa') // Leicht grauer für Labels
-                );
-                
-                modalContainer.addTextDisplayComponents(
-                    new TextDisplayBuilder()
-                        .setContent(answers[field.id])
-                );
-
-                // Optional: Kleiner Abstand zwischen den Fragen
-                if (field.id !== config.fields[config.fields.length - 1].id) {
-                     modalContainer.addSeparatorComponents(
-                        new SeparatorBuilder().setDivider(false).setSpacing(SeparatorSpacingSize.Small)
-                    );
-                }
-            }
-
-            // Post erstellen
-            const post = await targetChannel.threads.create({
-                name: `${interaction.user.tag}`,
-                message: {
-                    components: [modalContainer],
-                    flags: MessageFlags.IsComponentsV2
-                },
-            });
-
-            userIdToPostId.set(interaction.user.id, post.id);
-            postIdToUserId.set(post.id, interaction.user.id);
-
-            // Bestätigungsnachricht an den User 
+        if (userIdToPostId.has(interaction.user.id)) {
             await interaction.reply({
-                flags:MessageFlags.IsComponentsV2,
-                components: [
-                    new ContainerBuilder()
-                        .addTextDisplayComponents(
-                            new TextDisplayBuilder()
-                                .setContent('## ✅ Ticket erfolgreich erstellt!')
-                                .setColor('#00ff00')
-                        )
-                        .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
-                        .addTextDisplayComponents(
-                            new TextDisplayBuilder()
-                                .setContent('> *||Du wirst nun im Thread benachrichtigt, sobald das Team antwortet.||*')
-                        )
-                ]
+                content: '🚫 Du hast bereits ein offenes Ticket!',
+                flags: MessageFlags.Ephemeral
             });
+            return;
+        }
 
-            console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${answers[config.fields[0].id]}`);
+        // ========== FIX: KORREKTE LÖSCHUNG DER DM-NACHRICHT ==========
+        const oldDmMessageId = dmMessageIds.get(interaction.user.id);
+        if (oldDmMessageId) {
+            try {
+                // DM-Kanal zum User holen (nicht neu erstellen!)
+                const dmChannel = await interaction.user.createDM();
+                // Nachricht fetchen UND löschen
+                const msgToDelete = await dmChannel.messages.fetch(oldDmMessageId);
+                await msgToDelete.delete();
+                console.log('✅ DM-Ticket-Buttons gelöscht.');
+            } catch (err) {
+                console.warn('⚠️ Konnte alte DM-Nachricht nicht löschen:', err.message);
+                // Nicht abbrechen, weitermachen
+            }
+            // ID aus Map entfernen
+            dmMessageIds.delete(interaction.user.id);
+        }
+        // =======================================================
 
-        } catch (error) {
-            console.error('❌ Modal-Submit Fehler:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: '❌ Da ist etwas schiefgelaufen.',
-                    flags: MessageFlags.Ephemeral
-                }).catch(() => {});
+        const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
+
+        // Neuer, angepasster Container FÜR DAS TICKET
+        const modalContainer = new ContainerBuilder()
+            // Header Bereich
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent('# 🎫 Neues Ticket eröffnet')
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+            )
+            // User Info Block
+            .addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(
+                    `**Von:** ${interaction.user.tag}\n` +
+                    `**Kategorie:** ${config.modalTitle}`
+                )
+            )
+            .addSeparatorComponents(
+                new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
+            );
+
+        // Dynamische Felder hinzufügen
+        for (const field of config.fields) {
+            modalContainer.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(`**${field.label}**`)
+            );
+            
+            modalContainer.addTextDisplayComponents(
+                new TextDisplayBuilder().setContent(answers[field.id])
+            );
+
+            if (field.id !== config.fields[config.fields.length - 1].id) {
+                 modalContainer.addSeparatorComponents(
+                    new SeparatorBuilder().setDivider(false).setSpacing(SeparatorSpacingSize.Small)
+                );
             }
         }
-        return;
+
+        // Post erstellen
+        const post = await targetChannel.threads.create({
+            name: `${interaction.user.tag}`,
+            message: {
+                components: [modalContainer],
+                flags: MessageFlags.IsComponentsV2
+            },
+        });
+
+        userIdToPostId.set(interaction.user.id, post.id);
+        postIdToUserId.set(post.id, interaction.user.id);
+
+        await interaction.reply({
+            flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+            components: [
+                new ContainerBuilder()
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent('## ✅ Ticket erfolgreich erstellt!')
+                    )
+                    .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+                    .addTextDisplayComponents(
+                        new TextDisplayBuilder().setContent('> *Du wirst nun im Thread benachrichtigt, sobald das Team antwortet.*')
+                    )
+            ]
+        });
+
+        console.log(`🎫 Ticket erstellt: ${interaction.user.tag} | ${answers[config.fields[0].id]}`);
+
+    } catch (error) {
+        console.error('❌ Modal-Submit Fehler:', error);
+        if (!interaction.replied && !interaction.deferred) {
+            await interaction.reply({
+                content: '❌ Da ist etwas schiefgelaufen.',
+                flags: MessageFlags.Ephemeral
+            }).catch(() => {});
+        }
     }
+    return;
+}
 
     
     if (!interaction.isButton()) return;

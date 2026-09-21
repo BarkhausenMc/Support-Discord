@@ -384,88 +384,55 @@ client.on('clientReady', async () => {
 // ======================================================
 
 client.on('messageCreate', async (message) => {
-
     if (message.author.bot) return;
 
     // Nur DMs
     if (message.channel.type !== 1) return;
 
-
     try {
 
-        // ==============================================
-        // EXISTIERENDES TICKET SUCHEN
-        // ==============================================
+        const existingPostId = userIdToPostId.get(message.author.id);
 
-        const existingPostId =
-            userIdToPostId.get(
-                message.author.id
-            );
-
+        // ==================================================
+        // USER HAT BEREITS EIN TICKET
+        // ==================================================
 
         if (existingPostId) {
 
-            let post = null;
-
+            let post;
 
             try {
-
-                post = await client.channels.fetch(
-                    existingPostId
-                );
-
+                post = await client.channels.fetch(existingPostId);
             } catch (error) {
 
                 console.log(
-                    '⚠️ Ticket nicht mehr erreichbar:',
+                    `⚠️ Ticket ${existingPostId} konnte nicht geladen werden:`,
                     error.message
                 );
 
-
-                userIdToPostId.delete(
-                    message.author.id
-                );
-
-                postIdToUserId.delete(
-                    existingPostId
-                );
+                // Nur aus Maps entfernen, wenn der Thread
+                // wirklich nicht mehr existiert
+                userIdToPostId.delete(message.author.id);
+                postIdToUserId.delete(existingPostId);
             }
-
 
             if (post) {
 
-                // ======================================
-                // ARCHIVIERTES TICKET ÖFFNEN
-                // ======================================
-
+                // Archiviertes Ticket wieder öffnen
                 if (post.archived) {
-
                     await post.setArchived(false);
-
-                    console.log(
-                        `📂 Ticket wieder geöffnet: ${post.name}`
-                    );
                 }
 
-
-                // ======================================
-                // NACHRICHT AN TICKET
-                // ======================================
-
+                // Nachricht ins Ticket schicken
                 await post.send(
-                    `📨 **${message.author.tag}:** ${
-                        message.content || '*Kein Text*'
-                    }`
+                    `📨 **${message.author.tag}:** ${message.content || '*Kein Text*'}`
                 );
 
-
-                await message.react('📨');
-
+                await message.react('📨').catch(() => {});
 
                 console.log(
                     `📤 Ticket-Nachricht von ${message.author.tag}`
                 );
-
 
                 return;
             }
@@ -473,13 +440,8 @@ client.on('messageCreate', async (message) => {
 
 
         // ==================================================
-        // KEIN TICKET → TICKET-AUSWAHL SENDEN
+        // KEIN TICKET → TICKET-AUSWAHL
         // ==================================================
-
-
-        // ==============================================
-        // BILD CONTAINER
-        // ==============================================
 
         const pictureContainer =
             new ContainerBuilder()
@@ -493,11 +455,6 @@ client.on('messageCreate', async (message) => {
                         ])
                 );
 
-
-        // ==============================================
-        // TEXT CONTAINER
-        // ==============================================
-
         const categoryContainer =
             new ContainerBuilder()
                 .addTextDisplayComponents(
@@ -508,81 +465,51 @@ client.on('messageCreate', async (message) => {
                         )
                 );
 
-
-        // ==============================================
-        // BUTTON CONTAINER
-        // ==============================================
-
         const buttonContainer =
             new ContainerBuilder()
                 .addActionRowComponents(
-
                     new ActionRowBuilder()
                         .addComponents(
 
                             new ButtonBuilder()
-                                .setCustomId(
-                                    'generel_support'
-                                )
-                                .setLabel(
-                                    '❓ Generell Support'
-                                )
-                                .setStyle(
-                                    ButtonStyle.Secondary
-                                ),
+                                .setCustomId('generel_support')
+                                .setLabel('❓ Generell Support')
+                                .setStyle(ButtonStyle.Secondary),
 
                             new ButtonBuilder()
-                                .setCustomId(
-                                    'cooperation'
-                                )
-                                .setLabel(
-                                    '🤝 Kooperation'
-                                )
-                                .setStyle(
-                                    ButtonStyle.Secondary
-                                ),
+                                .setCustomId('cooperation')
+                                .setLabel('🤝 Kooperation')
+                                .setStyle(ButtonStyle.Secondary),
 
                             new ButtonBuilder()
-                                .setCustomId(
-                                    'staff_apply'
-                                )
-                                .setLabel(
-                                    '📝 Staff Bewerbung'
-                                )
-                                .setStyle(
-                                    ButtonStyle.Secondary
-                                )
+                                .setCustomId('staff_apply')
+                                .setLabel('📝 Staff Bewerbung')
+                                .setStyle(ButtonStyle.Secondary)
                         )
                 );
 
-
         await message.channel.send({
-
             components: [
                 pictureContainer,
                 categoryContainer,
                 buttonContainer
             ],
-
-            flags:
-                MessageFlags.IsComponentsV2
+            flags: MessageFlags.IsComponentsV2
         });
-
 
         console.log(
             `📨 Ticket-Options gesendet an ${message.author.tag}`
         );
 
-
     } catch (error) {
 
         console.error(
             '❌ Fehler:',
-            error
+            error.message
         );
     }
-
 });
+
 
 
 // ======================================================

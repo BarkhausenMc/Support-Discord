@@ -333,15 +333,14 @@ if (interaction.isModalSubmit()) {
                     .setSpacing(1)
             );
 
-            let fieldContent = '';
-            for (const field of config.fields) {
-                fieldContent += `\n**${field.label}:** ${answers[field.id]}\n`;
-            }
-            modalContainer.addTextDisplayComponents(
-                new TextDisplayBuilder()
-                    .setContent(fieldContent.trim())
-                    .setStyle('Normal') 
-            );
+        let fieldContent = '';
+        for (const field of config.fields) {
+            fieldContent += `\n**${field.label}:** ${answers[field.id]}\n`;
+        }
+        modalContainer.addTextDisplayComponents(
+            new TextDisplayBuilder()
+                .setContent(fieldContent.trim())
+        );
 
 
         // Post erstellen

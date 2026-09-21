@@ -39,7 +39,7 @@ const MODAL_CONFIG = {
         fields: [
             {
                 id: 'problem',
-                label: 'Anliegen',  // OK (12 Zeichen)
+                label: 'Anliegen', 
                 style: 'SHORT',
                 placeholder: 'z.B. Bot antwortet nicht',
                 required: true,
@@ -47,7 +47,7 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'problem_since_when',
-                label: 'Seit wann?',  // OK (12 Zeichen)
+                label: 'Seit wann?',  
                 style: 'SHORT',
                 placeholder: 'z.B. seit heute Morgen',
                 required: false,
@@ -55,7 +55,7 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'problem_description',
-                label: 'Details',  // OK (7 Zeichen)
+                label: 'Details',  
                 style: 'PARAGRAPH',
                 placeholder: 'Was hast du versucht?',
                 required: true,
@@ -68,7 +68,7 @@ const MODAL_CONFIG = {
         fields: [
             {
                 id: 'cooperation_request',
-                label: 'Dein Name/Server',  // ✅ 20 Zeichen (<45)
+                label: 'Dein Name/Server', 
                 style: 'SHORT',
                 placeholder: 'Discord-Invite/Website',
                 required: true,
@@ -76,7 +76,7 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'cooperation_why',
-                label: 'Warum Kooperation?',  // ✅ 19 Zeichen (<45)
+                label: 'Warum Kooperation?',
                 style: 'PARAGRAPH',
                 placeholder: 'Erzähl uns mehr...',
                 required: true,
@@ -89,7 +89,7 @@ const MODAL_CONFIG = {
         fields: [
             {
                 id: 'staff_apply',
-                label: 'Position',  // ✅ 8 Zeichen (<45)
+                label: 'Position',
                 style: 'SHORT',
                 placeholder: 'z.B. Moderator',
                 required: true,
@@ -97,7 +97,7 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'staff_apply_why',
-                label: 'Warum als Staff?',  // ✅ 17 Zeichen (<45)
+                label: 'Warum als Staff?',  
                 style: 'PARAGRAPH',
                 placeholder: 'Deine Gründe',
                 required: true,
@@ -105,7 +105,7 @@ const MODAL_CONFIG = {
             },
             {
                 id: 'staff_apply_personal',
-                label: 'Warum dich?',  // ✅ 12 Zeichen (<45)
+                label: 'Warum dich?',  
                 style: 'PARAGRAPH',
                 placeholder: 'Deine Stärken',
                 required: true,
@@ -306,13 +306,11 @@ if (interaction.isModalSubmit()) {
 
         const targetChannel = await client.channels.fetch(process.env.CHANNEL_ID);
 
-        // ✅ ID FÜR SPEICHERUNG ERSTELLEN
         const hiddenID = `(ID: ${interaction.user.id})`;
 
-        // ✅ ALLES IN EINEM Container BAUEN (content + ID + Inhalt)
         const modalContainer = new ContainerBuilder()
             .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(hiddenID) // ← ID HIER, VOR DEM SPLITTER
+                new TextDisplayBuilder().setContent('||hiddenID||') 
             )
             .addSeparatorComponents(
                 new SeparatorBuilder()
@@ -341,7 +339,6 @@ if (interaction.isModalSubmit()) {
                     .setSpacing(1)
             );
 
-        // ✅ ALLE FELD-INHALTE IN EINEM TEXTDISPLAY
         let fieldContent = '';
         for (const field of config.fields) {
             fieldContent += `\n**${field.label}:** ${answers[field.id]}\n`;
@@ -351,11 +348,10 @@ if (interaction.isModalSubmit()) {
                 .setContent(fieldContent.trim())
         );
 
-        // ✅ POST ERSTELLEN OHNE separate content Zeile
         const post = await targetChannel.threads.create({
             name: `${interaction.user.tag}`,
             message: {
-                components: [modalContainer], // ← NUR components, kein content!
+                components: [modalContainer],
                 flags: MessageFlags.IsComponentsV2
             },
         });
@@ -374,7 +370,7 @@ if (interaction.isModalSubmit()) {
                     .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
                     .addTextDisplayComponents(
                         new TextDisplayBuilder()
-                            .setContent('> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*')
+                            .setContent(`> *|| Du kannst nun hier im Chat mit dem Support kommunizieren. ||*\n> ||${hiddenID}||`)
                     )
             ]
         });

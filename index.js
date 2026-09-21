@@ -308,7 +308,7 @@ client.on('interactionCreate', async (interaction) => {
             );
             
             modalContainer.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(```${answers[field.id]}```)
+                new TextDisplayBuilder().setContent(`${answers[field.id]}`)
             );
 
             if (field.id !== config.fields[config.fields.length - 1].id) {
@@ -329,6 +329,10 @@ client.on('interactionCreate', async (interaction) => {
 
         userIdToPostId.set(interaction.user.id, post.id);
         postIdToUserId.set(post.id, interaction.user.id);
+
+        console.log(`🎫 POST ERSTELLT: ${post.id}`);
+        console.log(`👤 USER-ID GESPEICERT: ${interaction.user.id} → ${post.id}`);
+        console.log(`📋 postIdToUserId Map Größe: ${postIdToUserId.size}`);
 
         // Bestätigungsnachricht:
         await interaction.reply({

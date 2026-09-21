@@ -310,7 +310,7 @@ if (interaction.isModalSubmit()) {
 
         const modalContainer = new ContainerBuilder()
             .addTextDisplayComponents(
-                new TextDisplayBuilder().setContent('||hiddenID||') 
+                new TextDisplayBuilder().setContent(`||${hiddenID}||`) 
             )
             .addSeparatorComponents(
                 new SeparatorBuilder()
@@ -365,7 +365,7 @@ if (interaction.isModalSubmit()) {
                 new ContainerBuilder()
                     .addTextDisplayComponents(
                         new TextDisplayBuilder()
-                            .setContent(`## ✅ Ticket erfolgreich erstellt!\n${hiddenID}`)
+                            .setContent(`## ✅ Ticket erfolgreich erstellt!`)
                     )
                     .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
                     .addTextDisplayComponents(

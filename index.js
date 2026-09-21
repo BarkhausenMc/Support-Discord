@@ -288,7 +288,7 @@ client.on('interactionCreate', async (interaction) => {
                 new TextDisplayBuilder().setContent('# 🎫 Neues Ticket eröffnet')
             )
             .addSeparatorComponents(
-                new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small)
+                new SeparatorBuilder().setDivider(true).setSpacing(1) // Small = 1
             )
             // User Info Block
             .addTextDisplayComponents(
@@ -298,7 +298,7 @@ client.on('interactionCreate', async (interaction) => {
                 )
             )
             .addSeparatorComponents(
-                new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Medium)
+                new SeparatorBuilder().setDivider(true).setSpacing(2) // Medium = 2
             );
 
         // Dynamische Felder hinzufügen
@@ -312,8 +312,8 @@ client.on('interactionCreate', async (interaction) => {
             );
 
             if (field.id !== config.fields[config.fields.length - 1].id) {
-                 modalContainer.addSeparatorComponents(
-                    new SeparatorBuilder().setDivider(false).setSpacing(SeparatorSpacingSize.Small)
+                modalContainer.addSeparatorComponents(
+                    new SeparatorBuilder().setDivider(false).setSpacing(1) // Small = 1
                 );
             }
         }
@@ -330,6 +330,7 @@ client.on('interactionCreate', async (interaction) => {
         userIdToPostId.set(interaction.user.id, post.id);
         postIdToUserId.set(post.id, interaction.user.id);
 
+        // Bestätigungsnachricht:
         await interaction.reply({
             flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
             components: [
@@ -337,9 +338,10 @@ client.on('interactionCreate', async (interaction) => {
                     .addTextDisplayComponents(
                         new TextDisplayBuilder().setContent('## ✅ Ticket erfolgreich erstellt!')
                     )
-                    .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small))
+                    .addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(1))
                     .addTextDisplayComponents(
-                        new TextDisplayBuilder().setContent('> *Du wirst nun im Thread benachrichtigt, sobald das Team antwortet.*')
+                        new TextDisplayBuilder()
+                            .setContent('> *||Du kannst nun hier im Chat mit dem Support kommunizieren.||*')
                     )
             ]
         });

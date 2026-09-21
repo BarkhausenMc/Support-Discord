@@ -288,7 +288,7 @@ client.on('interactionCreate', async (interaction) => {
                 new TextDisplayBuilder().setContent('# 🎫 Neues Ticket eröffnet')
             )
             .addSeparatorComponents(
-                new SeparatorBuilder().setDivider(true).setSpacing(1) // Small = 1
+                new SeparatorBuilder().setDivider(true).setSpacing(1) 
             )
             // User Info Block
             .addTextDisplayComponents(
@@ -298,22 +298,22 @@ client.on('interactionCreate', async (interaction) => {
                 )
             )
             .addSeparatorComponents(
-                new SeparatorBuilder().setDivider(true).setSpacing(2) // Medium = 2
+                new SeparatorBuilder().setDivider(true).setSpacing(1) 
             );
 
-        // Dynamische Felder hinzufügen
+  
         for (const field of config.fields) {
             modalContainer.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(`**${field.label}**`)
+                new TextDisplayBuilder().setContent(`**${field.label}:**`)
             );
             
             modalContainer.addTextDisplayComponents(
-                new TextDisplayBuilder().setContent(answers[field.id])
+                new TextDisplayBuilder().setContent(`${answers[field.id]}`)
             );
 
             if (field.id !== config.fields[config.fields.length - 1].id) {
                 modalContainer.addSeparatorComponents(
-                    new SeparatorBuilder().setDivider(false).setSpacing(1) // Small = 1
+                    new SeparatorBuilder().setDivider(true).setSpacing(1) 
                 );
             }
         }
@@ -332,7 +332,7 @@ client.on('interactionCreate', async (interaction) => {
 
         // Bestätigungsnachricht:
         await interaction.reply({
-            flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
+            flags:MessageFlags.IsComponentsV2,
             components: [
                 new ContainerBuilder()
                     .addTextDisplayComponents(
